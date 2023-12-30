@@ -1,4 +1,23 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2017/11/07 10:58:03
+// Design Name: 
+// Module Name: mips
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
 
 
 module mips(
@@ -7,32 +26,41 @@ module mips(
 	input wire[31:0] instrF,
 	output wire memwriteM,
 	output wire[31:0] aluoutM,writedataM,
-	input wire[31:0] readdataM
+	input wire[31:0] readdataM 
     );
 	
 	wire [5:0] opD,functD;
 	wire regdstE,alusrcE,pcsrcD,memtoregE,memtoregM,memtoregW,
 			regwriteE,regwriteM,regwriteW;
-	wire [2:0] alucontrolE;
+	wire [7:0] alucontrolE;
 	wire flushE,equalD;
 
 	controller c(
-		clk,rst,
+		clk,
+		rst,
 		//decode stage
-		opD,functD,equalD,
-		pcsrcD,branchD,jumpD,
+		opD,
+		functD,
+		pcsrcD,
+		branchD,
+		equalD,
+		jumpD,
 		
 		//execute stage
 		flushE,
-		memtoregE,alusrcE,
-		regdstE,regwriteE,	
+		memtoregE,
+		alusrcE,
+		regdstE,
+		regwriteE,	
 		alucontrolE,
 
 		//mem stage
-		memtoregM,memwriteM,
+		memtoregM,
+		memwriteM,
 		regwriteM,
 		//write back stage
-		memtoregW,regwriteW
+		memtoregW,
+		regwriteW
 		);
 	datapath dp(
 		clk,rst,
@@ -58,6 +86,6 @@ module mips(
 		//writeback stage
 		memtoregW,
 		regwriteW
-	);
+	    );
 	
 endmodule

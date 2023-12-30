@@ -1,33 +1,161 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2017/10/23 15:21:30
+// Design Name: 
+// Module Name: maindec
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
 
 module maindec(
-	input wire[5:0] opcode,     // 输入的指令操作码
-	output wire[1:0] alu_op,  // ALU操作码
-	
-	//output wire MemRead, // MemRead = 0， 不涉及内存读取
-	// PCSrc = 0， 不跳转分支
-	output wire MemtoReg,  // MemtoReg = 0，从ALU结果中取值
-	output wire MemWrite,  // MemWrite = 0，不涉及内存写入
-	output wire Branch,    // Branch = 0，  不涉及分支
-	output wire ALUSrc,    // ALUSrc = 0，  第二个操作数来自rs寄存器
-	output wire RegDst,    // RegDst = 0，  不将结果存储到rd寄存器中
-	output wire RegWrite,  // RegWrite = 0，不将结果写入寄存器
-	output wire Jump       // Jump = 0，    不涉及跳转
+	input wire[5:0] op,
+	output wire memtoreg,
+	output wire memwrite,
+	output wire branch,
+	output wire alusrc,
+	output wire regdst,
+	output wire regwrite,
+	output wire jump
+    );
 
-);
-
-	reg[8:0] controls;
-	assign {RegWrite,RegDst,ALUSrc,Branch,MemWrite,MemtoReg,Jump,alu_op} = controls;  // 将控制信号赋值给输出端口
-
+	reg[6:0] controls;
+	assign {regwrite,regdst,alusrc,branch,memwrite,memtoreg,jump} = controls;
 	always @(*) begin
-		case (opcode)
-			6'b000000:controls <= 9'b1_1_0_0_0_0_0_10;  // R-Type
-			6'b100011:controls <= 9'b1_0_1_0_0_1_0_00;  // lw
-			6'b101011:controls <= 9'b0_0_1_0_1_0_0_00;  // sw
-			6'b000100:controls <= 9'b0_0_0_1_0_0_0_01;  // beq
-			6'b001000:controls <= 9'b1_0_1_0_0_0_0_00;  // addi
-			6'b000010:controls <= 9'b0_0_0_0_0_0_1_00;  // j
-			default:  controls <= 9'b0_0_0_0_0_0_0_00;
+		case (op)
+			`EXE_NOP: controls <= 7'b1100000; // R-type
+			`EXE_ANDI: controls <= 7'b1010000;
+			`EXE_ORI: controls <= 7'b1010000;
+			`EXE_XORI: controls <= 7'b1010000;
+			`EXE_LUI: controls <= 7'b1010000;
+			default:  controls <= 7'b0000000;//illegal op
 		endcase
 	end
+
+	// 规定： 1 ? x : y
+	// regwrite: 是否需要写回寄存器
+	// regdst: 写回寄存器的地址rd， rt
+	// alusrc: alu的第二个操作数是否来自立即数
+	// branch: 是否是分支指令
+	// memwrite: 是否需要写内存
+	// memtoreg: 写回阶段写回寄存器堆的值是否来自内存
+	// jump: 是否是跳转指令
+
+	// regwrite 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI, 
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI,
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: regwrite <= 1'b1;
+	// 		default: regwrite <= 1'b0;
+	// 	endcase
+	// end
+
+	// // regdst 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI,
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI: regdst <= 1'b0;
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: regdst <= 1'b1;
+	// 		default: regdst <= 1'b0;
+	// 	endcase
+	// end
+
+	// // alusrc 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI,
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI: alusrc <= 1'b1;
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: alusrc <= 1'b0;
+	// 		default: alusrc <= 1'b0;
+	// 	endcase
+	// end
+
+
+	// // branch 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI,
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI,
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: branch <= 1'b0;
+	// 		default: branch <= 1'b0;
+	// 	endcase
+	// end
+
+	// // memwrite 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI,
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI,
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: memwrite <= 1'b0;
+	// 		default: memwrite <= 1'b0;
+	// 	endcase
+	// end
+
+	// // memtoreg 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI,
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI,
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: memtoreg <= 1'b0;
+	// 		default: memtoreg <= 1'b0;
+	// 	endcase
+	// end
+
+
+	// // jump 信号
+	// always @(*) begin
+	// 	case (op)
+	// 		`EXE_ANDI,
+	// 		`EXE_ORI,
+	// 		`EXE_XORI,
+	// 		`EXE_LUI,
+	// 		`EXE_AND,
+	// 		`EXE_OR,
+	// 		`EXE_XOR,
+	// 		`EXE_NOR: jump <= 1'b0;
+	// 		default: jump <= 1'b0;
+	// 	endcase
+	// end
 endmodule

@@ -1,67 +1,96 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2017/10/23 15:21:30
+// Design Name: 
+// Module Name: controller
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
 
 
 module controller(
-	input wire clk, rst,  // 时钟信号和复位信号
-
-	// decode stage
-	input wire [5:0] opcode_D, funct_D, Equal_D,  // 解码阶段的输入信号
-	output wire PCSrc_D, Branch_D, Jump_D,  // 解码阶段的输出信号
+	input wire clk,
+	input wire rst,
+	//decode stage
+	input wire[5:0] opD,
+	input wire[5:0] functD, 
+	output wire pcsrcD,
+	output wire branchD,
+	output wire equalD,
+	output wire jumpD,
 	
-	// execute stage
-	input wire Flush_E,  // 执行阶段的 flush 信号
-	output wire MemtoReg_E, ALUSrc_E,  // 执行阶段的输出信号
-	output wire RegDst_E, RegWrite_E,  // 执行阶段的输出信号
-	output wire [2:0] ALUControl_E,  // 执行阶段的输出信号
+	//execute stage
+	input wire flushE,
+	output wire memtoregE,
+	output wire alusrcE,
+	output wire regdstE,
+	output wire regwriteE,	
+	output wire[7:0] alucontrolE,
 
-	// mem stage
-	output wire MemtoReg_M, MemWrite_M, RegWrite_M,  // 存储器阶段的输出信号
-
-	// write back stage
-	output wire MemtoReg_W, RegWrite_W  // 写回阶段的输出信号
+	//mem stage
+	output wire memtoregM,
+	output wire memwriteM,
+	output wire regwriteM,
+	//write back stage
+	output wire memtoregW,
+	output wire regwriteW
     );
 	
-	// decode stage
-	wire [1:0] aluop_D;
-	wire MemtoReg_D, MemWrite_D, ALUSrc_D, RegDst_D, RegWrite_D;  // 解码阶段的中间信号
-	wire [2:0] ALUControl_D;  // ALU 控制信号
+	//decode stage
+	wire memtoregD,memwriteD,alusrcD,
+		regdstD,regwriteD;
+	wire[7:0] alucontrolD;
 
-	// execute stage
-	wire MemWrite_E;  // 执行阶段的中间信号
+	//execute stage
+	wire memwriteE;
 
 	maindec md(
-		opcode_D,
-		aluop_D,
-
-		MemtoReg_D, 
-		MemWrite_D,
-		Branch_D, 
-		ALUSrc_D,
-		RegDst_D, 
-		RegWrite_D,
-		Jump_D
+		opD,
+		memtoregD,
+		memwriteD,
+		branchD,
+		alusrcD,
+		regdstD,
+		regwriteD,
+		jumpD
 		);
-	aludec ad(funct_D, aluop_D, ALUControl_D);  // ALU 控制信号的解码过程
-	assign PCSrc_D = Branch_D & Equal_D;  // 计算 PCSrc_D 信号的赋值
+		
+	aludec ad(
+		.funct(functD),
+		.aluop(opD), 
+		.alucontrol(alucontrolD)
+		);
 
-	// pipeline registers
-	floprc #(8) regE(
-		clk, rst,
-		Flush_E,
-		{MemtoReg_D, MemWrite_D, ALUSrc_D, RegDst_D, RegWrite_D, ALUControl_D},
-		{MemtoReg_E, MemWrite_E, ALUSrc_E, RegDst_E, RegWrite_E, ALUControl_E}
-		);  // 执行阶段的流水线寄存器
+	assign pcsrcD = branchD & equalD;
 
+	//pipeline registers
+	floprc #(13) regE(
+		clk,
+		rst,
+		flushE,
+		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD},
+		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE}
+		);
 	flopr #(8) regM(
-		clk, rst,
-		{MemtoReg_E, MemWrite_E, RegWrite_E},
-		{MemtoReg_M, MemWrite_M, RegWrite_M}
-		);  // 存储器阶段的流水线寄存器
-
+		clk,rst,
+		{memtoregE,memwriteE,regwriteE},
+		{memtoregM,memwriteM,regwriteM}
+		);
 	flopr #(8) regW(
-		clk, rst,
-		{MemtoReg_M, RegWrite_M},
-		{MemtoReg_W, RegWrite_W}
-		);  // 写回阶段的流水线寄存器
+		clk,rst,
+		{memtoregM,regwriteM},
+		{memtoregW,regwriteW}
+		);
 endmodule
-

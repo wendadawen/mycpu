@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2017/11/02 14:20:09
+// Create Date: 2017/11/02 14:29:33
 // Design Name: 
-// Module Name: regfile
+// Module Name: signext
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,22 +20,22 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module regfile(
-	input wire clk,
-	input wire we3,
-	input wire[4:0] ra1,ra2,wa3,
-	input wire[31:0] wd3,
-	output wire[31:0] rd1,rd2
+module signext(
+	input wire[15:0] a,
+	input wire [5: 0] opcode,
+	output wire[31:0] y
     );
-
-	reg [31:0] rf[31:0];
-
-	always @(negedge clk) begin
-		if(we3) begin
-			 rf[wa3] <= wd3;
-		end
+	reg [31:0] res;
+	assign y = res;
+	always @(*) begin
+		case (opcode[5: 2])
+			4'b0000: begin
+				res <= {{16{a[15]}},a};
+			end
+			4'b0011: begin
+				res <= {16'b0, a};
+			end
+			default: res <=  {{16{a[15]}},a};
+		endcase	
 	end
-
-	assign rd1 = (ra1 != 0) ? rf[ra1] : 0;
-	assign rd2 = (ra2 != 0) ? rf[ra2] : 0;
 endmodule

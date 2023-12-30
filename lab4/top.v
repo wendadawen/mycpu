@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2017/11/02 14:20:09
+// Create Date: 2017/11/07 13:50:53
 // Design Name: 
-// Module Name: regfile
+// Module Name: top
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,22 +20,15 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module regfile(
-	input wire clk,
-	input wire we3,
-	input wire[4:0] ra1,ra2,wa3,
-	input wire[31:0] wd3,
-	output wire[31:0] rd1,rd2
+module top(
+	input wire clk,rst,
+	output wire[31:0] writedata,dataadr,
+	output wire memwrite
     );
 
-	reg [31:0] rf[31:0];
+	wire[31:0] pc,instr,readdata;
 
-	always @(negedge clk) begin
-		if(we3) begin
-			 rf[wa3] <= wd3;
-		end
-	end
-
-	assign rd1 = (ra1 != 0) ? rf[ra1] : 0;
-	assign rd2 = (ra2 != 0) ? rf[ra2] : 0;
+	mips mips(clk,rst,pc,instr,memwrite,dataadr,writedata,readdata);
+	inst_mem imem(~clk,pc[7:2],instr);
+	data_mem dmem(~clk,memwrite,dataadr,writedata,readdata);
 endmodule

@@ -1,65 +1,97 @@
 `timescale 1ns / 1ps
-
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2017/11/22 10:23:13
+// Design Name: 
+// Module Name: hazard
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
 
 
 module hazard(
 	//fetch stage
-	output wire Stall_F,
+	output wire stallF,
 	//decode stage
-	input wire[4:0] rs_D,rt_D,
-	input wire Branch_D,
-	output wire ForwardA_D,ForwardB_D,
-	output wire Stall_D,
+	input wire[4:0] rsD,rtD,
+	input wire branchD,
+	output wire forwardaD,forwardbD,
+	output wire stallD,
 	//execute stage
-	input wire[4:0] rs_E,rt_E,
-	input wire[4:0] write_reg_E,
-	input wire RegWrite_E,
-	input wire MemtoReg_E,
-	output reg[1:0] ForwardA_E,ForwardB_E,
-	output wire Flush_E,
+	input wire[4:0] rsE,rtE,
+	input wire[4:0] writeregE,
+	input wire regwriteE,
+	input wire memtoregE,
+	output reg[1:0] forwardaE,forwardbE,
+	output wire flushE,
 	//mem stage
-	input wire[4:0] write_reg_M,
-	input wire RegWrite_M,
-	input wire MemtoReg_M,
+	input wire[4:0] writeregM,
+	input wire regwriteM,
+	input wire memtoregM,
 
 	//write back stage
-	input wire[4:0] write_reg_W,
-	input wire RegWrite_W
+	input wire[4:0] writeregW,
+	input wire regwriteW
     );
 
-	wire lw_stall_D,branch_stall_D;
+	wire lwstallD,branchstallD;
 
-	// 分支提前造成的数据前推
-	assign ForwardA_D = (rs_D != 0 & rs_D == write_reg_M & RegWrite_M);
-	assign ForwardB_D = (rt_D != 0 & rt_D == write_reg_M & RegWrite_M);
+	//forwarding sources to D stage (branch equality)
+	assign forwardaD = (rsD != 0 & rsD == writeregM & regwriteM);
+	assign forwardbD = (rtD != 0 & rtD == writeregM & regwriteM);
 	
-	// sub add add  OR  lw add 
+	//forwarding sources to E stage (ALU)
+
 	always @(*) begin
-		ForwardA_E = 2'b00;
-		ForwardB_E = 2'b00;
-		if(rs_E != 0) begin
-			if(rs_E == write_reg_M & RegWrite_M) begin
-				ForwardA_E = 2'b10;
-			end else if(rs_E == write_reg_W & RegWrite_W) begin
-				ForwardA_E = 2'b01;
+		forwardaE = 2'b00;
+		forwardbE = 2'b00;
+		if(rsE != 0) begin
+			/* code */
+			if(rsE == writeregM & regwriteM) begin
+				/* code */
+				forwardaE = 2'b10;
+			end else if(rsE == writeregW & regwriteW) begin
+				/* code */
+				forwardaE = 2'b01;
 			end
 		end
-		if(rt_E != 0) begin
-			if(rt_E == write_reg_M & RegWrite_M) begin
-				ForwardB_E = 2'b10;
-			end else if(rt_E == write_reg_W & RegWrite_W) begin
-				ForwardB_E = 2'b01;
+		if(rtE != 0) begin
+			/* code */
+			if(rtE == writeregM & regwriteM) begin
+				/* code */
+				forwardbE = 2'b10;
+			end else if(rtE == writeregW & regwriteW) begin
+				/* code */
+				forwardbE = 2'b01;
 			end
 		end
 	end
-	
+
 	//stalls
-	assign #1 lw_stall_D = MemtoReg_E & (rt_E == rs_D | rt_E == rt_D);
-	assign #1 branch_stall_D = Branch_D & (
-				RegWrite_E & (write_reg_E == rs_D | write_reg_E == rt_D) |
-				MemtoReg_M & (write_reg_M == rs_D | write_reg_M == rt_D)
-				);
-	assign #1 Stall_D = lw_stall_D | branch_stall_D;
-	assign #1 Stall_F = lw_stall_D | branch_stall_D;
-	assign #1 Flush_E = lw_stall_D | branch_stall_D;
+	assign #1 lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
+	assign #1 branchstallD = branchD &
+				(regwriteE & 
+				(writeregE == rsD | writeregE == rtD) |
+				memtoregM &
+				(writeregM == rsD | writeregM == rtD));
+	assign #1 stallD = lwstallD | branchstallD;
+	assign #1 stallF = stallD;
+		//stalling D stalls all previous stages
+	assign #1 flushE = stallD;
+		//stalling D flushes next stage
+	// Note: not necessary to stall D stage on store
+  	//       if source comes from load;
+  	//       instead, another bypass network could
+  	//       be added from W to M
 endmodule
