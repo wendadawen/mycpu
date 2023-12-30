@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`include "defines.vh"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -21,25 +22,34 @@
 
 module maindec(
 	input wire[5:0] op,
+	input wire[5:0] funct,
 	output wire memtoreg,
 	output wire memwrite,
 	output wire branch,
 	output wire alusrc,
 	output wire regdst,
 	output wire regwrite,
-	output wire jump
+	output wire jump,
+	output wire HiLoWrite
     );
 
-	reg[6:0] controls;
-	assign {regwrite,regdst,alusrc,branch,memwrite,memtoreg,jump} = controls;
+	reg[7:0] controls;
+	assign {regwrite,regdst,alusrc,branch,memwrite,memtoreg,jump, HiLoWrite} = controls;
 	always @(*) begin
 		case (op)
-			`EXE_NOP: controls <= 7'b1100000; // R-type
-			`EXE_ANDI: controls <= 7'b1010000;
-			`EXE_ORI: controls <= 7'b1010000;
-			`EXE_XORI: controls <= 7'b1010000;
-			`EXE_LUI: controls <= 7'b1010000;
-			default:  controls <= 7'b0000000;//illegal op
+			`EXE_NOP: case (funct)
+				// move instruction 
+				`EXE_MFHI: controls <= 8'b11000001;
+				`EXE_MFLO: controls <= 8'b11000001;
+				`EXE_MTHI: controls <= 8'b00000001;
+				`EXE_MTLO: controls <= 8'b00000001;
+				default: controls <= 8'b11000000; // R-Type
+			endcase
+			`EXE_ANDI: controls <= 8'b10100000;
+			`EXE_ORI: controls <= 8'b10100000;
+			`EXE_XORI: controls <= 8'b10100000;
+			`EXE_LUI: controls <= 8'b10100000;
+			default:  controls <= 8'b00000000;//illegal op
 		endcase
 	end
 
