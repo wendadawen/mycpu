@@ -14,7 +14,7 @@ module datapath(
 	input wire MemtoReg_E,
 	input wire AluSrc_E,RegDst_E,
 	input wire RegWrite_E,
-	input wire[2:0] ALUControl_E,
+	input wire[7:0] ALUControl_E,
 	output wire Flush_E,
 	//mem stage
 	input wire MemtoReg_M,
@@ -78,7 +78,6 @@ module datapath(
 	
 
 	//=============Fetch
-	//Next PC
 	assign pc_next_F = (Jump_D) ? {pc_plus4_D[31:28],instr_D[25:0],2'b00}: 
 						(PCSrc_D) ? pc_branch_D: pc_plus4_F; // 下一个PC
 	assign pc_plus4_F = pc_F + 4;
@@ -88,10 +87,10 @@ module datapath(
 	//RegFile
 	regfile rf(
 		clk,
-		RegWrite_W, //写使能信号
-		rs_D,rt_D,write_reg_W,  //读地址 ra1, ra2，写地址 wa3
-		result_W,  //写数据
-		a_D,b_D  //读数据
+		RegWrite_W,
+		rs_D,rt_D,write_reg_W, 
+		result_W, 
+		a_D,b_D 
 		);
 
 	flopenr #(32) r1D(clk,rst,~Stall_D,pc_plus4_F,pc_plus4_D);
@@ -103,11 +102,11 @@ module datapath(
 	assign rt_D = instr_D[20:16];
 	assign rd_D = instr_D[15:11];
 
-	assign sign_imm_D = {{16{instr_D[15]}},instr_D[15:0]};  // 符号扩展
-	assign pc_branch_D = pc_plus4_D + {sign_imm_D[29:0],2'b00};  // 获取分支地址
-	assign a2_D = (ForwardA_D) ? aluout_M: a_D;  // 数据前推
-	assign b2_D = (ForwardB_D) ? aluout_M: b_D;  // 数据前推
-	assign Equal_D = (a2_D==b2_D)? 1: 0;  // a，b相等信号
+	signextend signextend(opcode_D, funct_D, instr_D[15:0], sign_imm_D);
+	assign pc_branch_D = pc_plus4_D + {sign_imm_D[29:0],2'b00};
+	assign a2_D = (ForwardA_D) ? aluout_M: a_D;
+	assign b2_D = (ForwardB_D) ? aluout_M: b_D;
+	assign Equal_D = (a2_D==b2_D)? 1: 0;
 
 
 	//============Execute
