@@ -11,18 +11,19 @@ module datapath(
 	output wire Equal_D,
 	output wire[5:0] opcode_D,funct_D,
 	//execute stage
-	input wire MemtoReg_E,
+	input wire [1:0]MemtoReg_E,
 	input wire AluSrc_E,RegDst_E,
 	input wire RegWrite_E,
 	input wire[7:0] ALUControl_E,
 	output wire Flush_E,
+	input wire LoWrite_E, HiWrite_E,
 	//mem stage
-	input wire MemtoReg_M,
+	input wire [1:0]MemtoReg_M,
 	input wire RegWrite_M,
 	output wire[31:0] aluout_M,write_data_M,
 	input wire[31:0] read_data_M,
 	//writeback stage
-	input wire MemtoReg_W,
+	input wire [1:0]MemtoReg_W,
 	input wire RegWrite_W
     );
 	
@@ -36,19 +37,26 @@ module datapath(
 	wire [4:0] rs_D,rt_D,rd_D;
 	wire Flush_D,Stall_D; 
 	wire [31:0] sign_imm_D;
-	wire [31:0] a_D,a2_D,b_D,b2_D;
+	wire [31:0] a_D,a1_D,b_D,b1_D;
+	wire [4:0] sa_D;
+	wire [31:0] hi_read_data_D, lo_read_data_D;
+
 	//execute stage
 	wire [1:0] ForwardA_E,ForwardB_E;
 	wire [4:0] rs_E,rt_E,rd_E;
 	wire [4:0] write_reg_E;
 	wire [31:0] sign_imm_E;
-	wire [31:0] a_E,a2_E,b_E,b2_E,b3_E;
+	wire [31:0] a_E,a1_E,b_E,b1_E,b2_E;
 	wire [31:0] aluout_E;
+	wire [4:0] sa_E;
+	wire [31:0] hi_read_data_E, lo_read_data_E;
 	//mem stage
 	wire [4:0] write_reg_M;
+	wire [31:0] hi_read_data_M, lo_read_data_M;
 	//writeback stage
 	wire [4:0] write_reg_W;
 	wire [31:0] aluout_W,read_data_W,result_W;
+	wire [31:0] hi_read_data_W, lo_read_data_W;
 
 	//Hazard
 	hazard h(
@@ -89,7 +97,7 @@ module datapath(
 		clk,
 		RegWrite_W,
 		rs_D,rt_D,write_reg_W, 
-		result_W, 
+		result_W,
 		a_D,b_D 
 		);
 
@@ -101,12 +109,15 @@ module datapath(
 	assign rs_D = instr_D[25:21];
 	assign rt_D = instr_D[20:16];
 	assign rd_D = instr_D[15:11];
+	assign sa_D = instr_D[10:6];
 
 	signextend signextend(opcode_D, funct_D, instr_D[15:0], sign_imm_D);
 	assign pc_branch_D = pc_plus4_D + {sign_imm_D[29:0],2'b00};
-	assign a2_D = (ForwardA_D) ? aluout_M: a_D;
-	assign b2_D = (ForwardB_D) ? aluout_M: b_D;
-	assign Equal_D = (a2_D==b2_D)? 1: 0;
+	assign a1_D = (ForwardA_D) ? aluout_M: a_D;
+	assign b1_D = (ForwardB_D) ? aluout_M: b_D;
+	assign Equal_D = (a1_D==b1_D)? 1: 0;
+	hiloreg HI(clk, HiWrite_E, a1_E, hi_read_data_D);
+	hiloreg LO(clk, LoWrite_E, a1_E, lo_read_data_D);
 
 
 	//============Execute
@@ -116,22 +127,29 @@ module datapath(
 	floprc #(5)  r4E(clk,rst,Flush_E,rs_D,rs_E);
 	floprc #(5)  r5E(clk,rst,Flush_E,rt_D,rt_E);
 	floprc #(5)  r6E(clk,rst,Flush_E,rd_D,rd_E);
+	floprc #(5)  r7E(clk,rst,Flush_E,sa_D,sa_E);
+	floprc #(32)  r8E(clk,rst,Flush_E,hi_read_data_D,hi_read_data_E);
+	floprc #(32)  r9E(clk,rst,Flush_E,lo_read_data_D,lo_read_data_E);
 
-	mux3 #(32) forwardaemux(a_E,result_W,aluout_M,ForwardA_E,a2_E);  // 获取ALU的A
-	mux3 #(32) forwardbemux(b_E,result_W,aluout_M,ForwardB_E,b2_E);  
-	assign b3_E = (AluSrc_E) ? sign_imm_E: b2_E;  // 获取ALU的B
+	mux3 #(32) forwardaemux(a_E,result_W,aluout_M,ForwardA_E,a1_E);  // 获取ALU的A
+	mux3 #(32) forwardbemux(b_E,result_W,aluout_M,ForwardB_E,b1_E);  
+	assign b2_E = (AluSrc_E) ? sign_imm_E: b1_E;  // 获取ALU的B
 
-	alu alu(a2_E,b3_E,ALUControl_E,aluout_E);  // ALU计算
+	alu alu(a1_E,b2_E,sa_E,ALUControl_E,aluout_E);  // ALU计算
 	assign write_reg_E = (RegDst_E) ? rd_E: rt_E;  // 判断写回数据地址
 
 	//===================Memory
-	flopr #(32) r1M(clk,rst,b2_E,write_data_M);
+	flopr #(32) r1M(clk,rst,b1_E,write_data_M);
 	flopr #(32) r2M(clk,rst,aluout_E,aluout_M);
 	flopr #(5)  r3M(clk,rst,write_reg_E,write_reg_M);
+	flopr #(32)  r4M(clk,rst,hi_read_data_E,hi_read_data_M);
+	flopr #(32)  r5M(clk,rst,lo_read_data_E,lo_read_data_M);
 
 	//===================Writeback
 	flopr #(32) r1W(clk,rst,aluout_M,aluout_W);
 	flopr #(32) r2W(clk,rst,read_data_M,read_data_W);
 	flopr #(5)  r3W(clk,rst,write_reg_M,write_reg_W);
-	assign result_W = (MemtoReg_W) ? read_data_W: aluout_W;
+	flopr #(32)  r4W(clk,rst,hi_read_data_M,hi_read_data_W);
+	flopr #(32)  r5W(clk,rst,lo_read_data_M,lo_read_data_W);
+	mux4 #(32) resultWmux4(aluout_W,read_data_W,hi_read_data_W,lo_read_data_W,MemtoReg_W,result_W);
 endmodule

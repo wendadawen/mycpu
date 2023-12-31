@@ -6,13 +6,15 @@ module maindec(
 	input wire[5:0] opcode,
 	input wire[5:0] funct,
 	
-	output reg MemtoReg,
+	output reg [1:0] MemtoReg,
 	output reg MemWrite,
 	output reg Branch,
 	output reg ALUSrcB,
 	output reg RegDst,
 	output reg RegWrite,
 	output reg JumpJ,
+	output reg LoWrite,
+	output reg HiWrite,
 	output reg [7:0] ALUControl
 );
 	// ALUControl
@@ -24,6 +26,12 @@ module maindec(
 					`FUNCT_OR:    ALUControl <= `ALU_OR;
 					`FUNCT_XOR:   ALUControl <= `ALU_XOR;
 					`FUNCT_NOR:   ALUControl <= `ALU_NOR;
+					`FUNCT_SLL:   ALUControl <= `ALU_SLL;
+					`FUNCT_SRL:   ALUControl <= `ALU_SRL;
+					`FUNCT_SRA:   ALUControl <= `ALU_SRA;
+					`FUNCT_SLLV:  ALUControl <= `ALU_SLLV;
+					`FUNCT_SRLV:  ALUControl <= `ALU_SRLV;
+					`FUNCT_SRAV:  ALUControl <= `ALU_SRAV;
 					default: ALUControl <= `ALU_DEFAULT;
 				endcase
 			end
@@ -35,15 +43,17 @@ module maindec(
 		endcase
 	end
 
-	// MemtoReg
+	// MemtoReg[1:0]
 	always @(*) begin
 		case(opcode)
 			`OP_R_TYPE: begin
 				case(funct)
-					default: MemtoReg <= 1'b0;
+					`FUNCT_MFHI: MemtoReg <= 2'b10;
+					`FUNCT_MFLO: MemtoReg <= 2'b11;
+					default: MemtoReg <= 2'b00;
 				endcase
 			end
-			default: MemtoReg <= 1'b0;
+			default: MemtoReg <= 2'b00;
 		endcase
 	end
 
@@ -99,7 +109,15 @@ module maindec(
 					`FUNCT_AND,
 					`FUNCT_OR,
 					`FUNCT_XOR,
-					`FUNCT_NOR:   RegDst <= 1'b1;
+					`FUNCT_NOR,
+					`FUNCT_SLL,
+					`FUNCT_SRL,
+					`FUNCT_SRA,
+					`FUNCT_SLLV,
+					`FUNCT_SRLV,
+					`FUNCT_SRAV,
+					`FUNCT_MFHI,
+					`FUNCT_MFLO:   RegDst <= 1'b1;
 					default: RegDst <= 1'b0;
 				endcase
 			end
@@ -115,7 +133,15 @@ module maindec(
 					`FUNCT_AND,
 					`FUNCT_OR,
 					`FUNCT_XOR,
-					`FUNCT_NOR:   RegWrite <= 1'b1;
+					`FUNCT_NOR,
+					`FUNCT_SLL,
+					`FUNCT_SRL,
+					`FUNCT_SRA,
+					`FUNCT_SLLV,
+					`FUNCT_SRLV,
+					`FUNCT_SRAV,
+					`FUNCT_MFHI,
+					`FUNCT_MFLO:   RegWrite <= 1'b1;
 					default: RegWrite <= 1'b0;
 				endcase
 			end
@@ -136,6 +162,32 @@ module maindec(
 				endcase
 			end
 			default: JumpJ <= 1'b0;
+		endcase
+	end
+
+	// LoWrite
+	always @(*) begin
+		case(opcode) 
+			`OP_R_TYPE: begin
+				case(funct)
+					`FUNCT_MTLO: LoWrite <= 1'b1;
+					default: LoWrite <= 1'b0;
+				endcase
+			end
+			default: LoWrite <= 1'b0;
+		endcase
+	end
+
+	// HiWrite
+	always @(*) begin
+		case(opcode) 
+			`OP_R_TYPE: begin
+				case(funct)
+					`FUNCT_MTHI: HiWrite <= 1'b1;
+					default: HiWrite <= 1'b0;
+				endcase
+			end
+			default: HiWrite <= 1'b0;
 		endcase
 	end
 

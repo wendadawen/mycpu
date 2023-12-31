@@ -14,13 +14,13 @@ module hazard(
 	input wire[4:0] rs_E,rt_E,
 	input wire[4:0] write_reg_E,
 	input wire RegWrite_E,
-	input wire MemtoReg_E,
+	input wire [1:0]MemtoReg_E,
 	output reg[1:0] ForwardA_E,ForwardB_E,
 	output wire Flush_E,
 	//mem stage
 	input wire[4:0] write_reg_M,
 	input wire RegWrite_M,
-	input wire MemtoReg_M,
+	input wire [1:0]MemtoReg_M,
 
 	//write back stage
 	input wire[4:0] write_reg_W,
