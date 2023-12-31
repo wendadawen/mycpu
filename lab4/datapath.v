@@ -30,14 +30,16 @@ module datapath(
 	input wire pcsrcD,
 	input wire branchD,
 	input wire jumpD,
+	input wire[7:0] alucontrolD,
 	output wire equalD,
 	output wire[5:0] opD,functD,
+	output wire stallD,
 	//execute stage
 	input wire memtoregE,
 	input wire alusrcE,regdstE,
 	input wire regwriteE,
 	input wire[7:0] alucontrolE,
-	output wire flushE,
+	output wire flushE,stallE,
 	input wire HiLoWriteE,
 	//mem stage
 	input wire memtoregM,
@@ -59,10 +61,11 @@ module datapath(
 	wire [31:0] instrD;
 	wire forwardaD,forwardbD;
 	wire [4:0] rsD,rtD,rdD, saD;
-	wire flushD,stallD; 
+	wire flushD; 
 	wire [31:0] signimmD,signimmshD;
 	wire [31:0] srcaD,srca2D,srcbD,srcb2D;
 	//execute stage
+	wire [31:0] pcE, instrE, pcplus4E;
 	wire [1:0] forwardaE,forwardbE;
 	wire [4:0] rsE,rtE,rdE, saE;
 	wire [4:0] writeregE;
@@ -85,17 +88,25 @@ module datapath(
 		//fetch stage
 		stallF,
 		//decode stage
-		rsD,rtD,
+		rsD,
+		rtD,
 		branchD,
-		forwardaD,forwardbD,
+		forwardaD,
+		forwardbD,
 		stallD,
+		flushD,
 		//execute stage
-		rsE,rtE,
+		rsE,
+		rtE,
 		writeregE,
 		regwriteE,
 		memtoregE,
-		forwardaE,forwardbE,
+		forwardaE,
+		forwardbE,
 		flushE,
+		stallE,
+		alucontrolE,
+		ready_o,
 		//mem stage
 		writeregM,
 		regwriteM,
@@ -117,9 +128,17 @@ module datapath(
 	//fetch stage logic
 	pc #(32) pcreg(clk,rst,~stallF,pcnextFD,pcF);
 	adder pcadd1(pcF,32'b100,pcplus4F);
-	//decode stage
-	flopenr #(32) r1D(clk,rst,~stallD,pcplus4F,pcplus4D);
+
+
+
+	// fetch to decode stage pipeline
+	flopenrc #(32) r1D(clk,rst,~stallD,flushD, pcplus4F,pcplus4D);
 	flopenrc #(32) r2D(clk,rst,~stallD,flushD,instrF,instrD);
+	flopenrc #(32) r3D(clk,rst,~stallD,flushD,pcF,pcD);
+
+	//decode stage
+	
+
 	signext se(instrD[15:0],opD,signimmD);
 	sl2 immsh(signimmD,signimmshD);
 	adder pcadd2(pcplus4D,signimmshD,pcbranchD);
@@ -134,6 +153,9 @@ module datapath(
 	assign rdD = instrD[15:11];
 	assign saD = instrD[10:6];
 	//execute stage
+	flopenrc #(32) 	r8E(clk,rst,~stallE,flushE,pcD,pcE);
+	flopenrc #(32) 	r9E(clk,rst,~stallE,flushE,instrD,instrE);
+	flopenrc #(32) 	r10E(clk,rst,~stallE,flushE,pcplus4D,pcplus4E);
 	floprc #(32) r1E(clk,rst,flushE,srcaD,srcaE);
 	floprc #(32) r2E(clk,rst,flushE,srcbD,srcbE);
 	floprc #(32) r3E(clk,rst,flushE,signimmD,signimmE);
@@ -146,6 +168,23 @@ module datapath(
 	mux3 #(32) forwardaemux(srcaE,resultW,aluoutM,forwardaE,srca2E);
 	mux3 #(32) forwardbemux(srcbE,resultW,aluoutM,forwardbE,srcb2E);
 	mux2 #(32) srcbmux(srcb2E,signimmE,alusrcE,srcb3E);
+	// 与除法相关的几个信号
+	wire [63:0] div_result;
+	wire signed_div_i, start_i, annul_i, ready_o; // 是否是有符号除法，开始信号，取消信号, 除法结果是否准备好
+	assign  annul_i = 1'b0;
+	assign signed_div_i =  (alucontrolE == `EXE_DIV_OP)? 1'b1: 1'b0;
+	assign start_i = ((alucontrolE == `EXE_DIV_OP | alucontrolE == `EXE_DIVU_OP)& ~ready_o) ? 1'b1 : 1'b0;
+	div div(
+		.clk(clk),
+		.rst(rst),
+		.signed_div_i(signed_div_i),	
+		.opdata1_i(srca2E),		
+		.opdata2_i(srcb3E),		
+		.start_i(start_i),		
+		.annul_i(annul_i),		
+		.result_o(div_result),		
+		.ready_o(ready_o)			
+	);
 	alu alu(srca2E,srcb3E,saE, alucontrolE,aluoutE, overflowE, hilo_in, hilo_out);
 	// HILO 寄存器
 	hilo_reg hilo(
@@ -153,6 +192,8 @@ module datapath(
 		.rst(rst),
 		.HiLoWrite_en(HiLoWriteE),
 		.alucontrol(alucontrolE),
+		.div_result_ready(ready_o),
+		.div_result(div_result),
 		.hi_i(hilo_out[63:32]),
 		.lo_i(hilo_out[31:0]),
 		.hi_o(hilo_in[63:32]),

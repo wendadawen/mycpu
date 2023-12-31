@@ -114,6 +114,63 @@ module alu(
 				overflow = 0;
 			end
 
+			`EXE_ADD_OP: begin
+				y = a + b;
+				overflow = 0; // 先不考虑溢出
+			end
+			`EXE_ADDU_OP: begin
+				y = a + b;
+				overflow = 0;
+			end
+			`EXE_SUB_OP: begin
+				y = a - b;
+				overflow = 0; // 先不考虑溢出
+			end
+			`EXE_SUBU_OP: begin
+				y = a - b;
+				overflow = 0;
+			end
+			`EXE_SLT_OP: begin
+				y = ($signed(a) < $signed(b)) ? 1 : 0;
+				overflow = 0;
+			end
+			`EXE_SLTU_OP: begin
+				y = a < b ? 1 : 0;
+				overflow = 0;
+			end
+
+		/////////// 将除法指令移除alu计算 //////
+		//////// `EXE_DIV_OP: begin		//////
+		//////							//////
+		//////// end					//////
+		//////// `EXE_DIVU_OP: begin	//////
+		//////							//////
+		////// end						//////
+		////////// 将除法指令移除alu中计算//////
+			`EXE_MULT_OP: begin
+				hilo_out = $signed(a) * $signed(b);
+				overflow = 0;
+			end
+			`EXE_MULTU_OP: begin
+				hilo_out = {32'b0, a} * {32'b0, b};
+				overflow = 0;
+			end
+			`EXE_ADDI_OP: begin
+				y = a + b;
+				overflow = 0;// 先不考虑溢出
+			end
+			`EXE_ADDIU_OP: begin
+				y = a + b;
+				overflow = 0;
+			end
+			`EXE_SLTI_OP: begin
+				y = $signed(a) < $signed(b) ? 1 : 0;
+				overflow = 0;
+			end
+			`EXE_SLTIU_OP:	begin
+				y = a < b ? 1 : 0;
+				overflow = 0;
+			end
 			default: begin
 				y = 32'b0;
 				overflow = 0;

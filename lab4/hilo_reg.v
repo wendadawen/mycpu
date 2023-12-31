@@ -25,6 +25,10 @@ module hilo_reg(
 	input wire clk,rst,
 	input wire HiLoWrite_en,
 	input wire [7:0] alucontrol,
+	// 除法
+	input wire div_result_ready, //除法的结果是否准备好
+	input wire[63:0] div_result, // 除法的结果
+
 	input  wire [31:0] hi_i,lo_i,
 	output reg [31:0] hi_o,lo_o
     );
@@ -32,6 +36,10 @@ module hilo_reg(
 		if(rst)	begin
 			hi_o <= 0;
 			lo_o <= 0;
+		end
+		if(div_result_ready) begin
+			hi_o <= div_result[63:32];
+			lo_o <= div_result[31:0];
 		end
 		else if(HiLoWrite_en & alucontrol == `EXE_MTHI_OP) begin
 			hi_o <= hi_i;

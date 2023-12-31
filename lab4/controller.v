@@ -25,14 +25,15 @@ module controller(
 	input wire rst,
 	//decode stage
 	input wire[5:0] opD,
-	input wire[5:0] functD, 
+	input wire[5:0] functD,
+	input wire stallD, 
 	output wire pcsrcD,
 	output wire branchD,
 	output wire equalD,
 	output wire jumpD,
 	
 	output wire HiLoWriteD,
-	
+	output wire[7:0] alucontrolD,
 	//execute stage
 	input wire flushE,
 	output wire memtoregE,
@@ -61,7 +62,6 @@ module controller(
 	//decode stage
 	wire memtoregD;
 	wire memwriteD,alusrcD,regdstD,regwriteD;
-	wire[7:0] alucontrolD;
 
 	//execute stage
 	wire memwriteE;
@@ -89,9 +89,10 @@ module controller(
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	floprc #(13) regE(
+	flopenrc #(13) regE(
 		clk,
 		rst,
+		~stallD,
 		flushE,
 		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD},
 		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE}

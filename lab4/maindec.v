@@ -43,12 +43,28 @@ module maindec(
 				`EXE_MFLO: controls <= 8'b11000001;
 				`EXE_MTHI: controls <= 8'b00000001;
 				`EXE_MTLO: controls <= 8'b00000001;
+				// algorithm instruction
+				// div 和 divu
+				`EXE_DIV: controls <= 8'b00000001;
+				`EXE_DIVU: controls <= 8'b00000001;
+				// mult 和 multu
+				`EXE_MULT: controls <= 8'b00000001;
+				`EXE_MULTU: controls <= 8'b00000001;
+
 				default: controls <= 8'b11000000; // R-Type
 			endcase
 			`EXE_ANDI: controls <= 8'b10100000;
 			`EXE_ORI: controls <= 8'b10100000;
 			`EXE_XORI: controls <= 8'b10100000;
 			`EXE_LUI: controls <= 8'b10100000;
+
+			// algorithm instruction
+			`EXE_ADDI: controls <= 8'b10100000;
+			`EXE_ADDIU: controls <= 8'b10100000;
+			`EXE_SLTI: controls <= 8'b10100000;
+			`EXE_SLTIU: controls <= 8'b10100000;
+			
+			 
 			default:  controls <= 8'b00000000;//illegal op
 		endcase
 	end

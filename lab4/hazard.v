@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`include "defines.vh"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -27,14 +28,17 @@ module hazard(
 	input wire[4:0] rsD,rtD,
 	input wire branchD,
 	output wire forwardaD,forwardbD,
-	output wire stallD,
+	output wire stallD,flushD,
 	//execute stage
 	input wire[4:0] rsE,rtE,
 	input wire[4:0] writeregE,
 	input wire regwriteE,
 	input wire memtoregE,
 	output reg[1:0] forwardaE,forwardbE,
-	output wire flushE,
+	output wire flushE,stallE,
+	// 除法
+	input wire[7:0] alucontrolE,
+	input wire div_result_ready,
 	//mem stage
 	input wire[4:0] writeregM,
 	input wire regwriteM,
@@ -45,7 +49,7 @@ module hazard(
 	input wire regwriteW
     );
 
-	wire lwstallD,branchstallD;
+	wire lwstallD,branchstallD, stall_divE;
 
 	//forwarding sources to D stage (branch equality)
 	assign forwardaD = (rsD != 0 & rsD == writeregM & regwriteM);
@@ -78,17 +82,24 @@ module hazard(
 		end
 	end
 
+	// 除法阶段需要暂停流水线
+
+	assign stall_divE = ((alucontrolE == `EXE_DIV_OP) | (alucontrolE == `EXE_DIVU_OP)) & ~div_result_ready;
+
+
 	//stalls
-	assign #1 lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
-	assign #1 branchstallD = branchD &
+	assign  lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
+	assign  branchstallD = branchD &
 				(regwriteE & 
 				(writeregE == rsD | writeregE == rtD) |
 				memtoregM &
 				(writeregM == rsD | writeregM == rtD));
-	assign #1 stallD = lwstallD | branchstallD;
-	assign #1 stallF = stallD;
+	assign  stallD = lwstallD | branchstallD | stall_divE;
+	assign  stallF = stallD;
+	assign  stallE = stall_divE;
 		//stalling D stalls all previous stages
-	assign #1 flushE = stallD;
+	assign flushE = stallD;
+	assign  flushD = 0;
 		//stalling D flushes next stage
 	// Note: not necessary to stall D stage on store
   	//       if source comes from load;
