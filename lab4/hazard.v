@@ -10,6 +10,7 @@ module hazard(
 	input wire Branch_D,
 	output wire ForwardA_D,ForwardB_D,
 	output wire Stall_D,
+	input wire JumpJr_D,
 	//execute stage
 	input wire[4:0] rs_E,rt_E,
 	input wire[4:0] write_reg_E,
@@ -24,15 +25,17 @@ module hazard(
 	input wire RegWrite_M,
 	input wire [1:0]MemtoReg_M,
 	output wire Flush_M,
+	input wire WriteReg_M,
 
 	//write back stage
 	input wire[4:0] write_reg_W,
-	input wire RegWrite_W
-    );
+	input wire RegWrite_W,
+	input wire WriteReg_W
+);
 
-	wire lw_stall_D,branch_stall_D,alu_stall_E;
+	wire lw_stall_D,branch_stall_D,alu_stall_E,jr_stall_D;
 
-	// 分支提前造成的数据前推
+	// 分支提前造成的数据前�?
 	assign ForwardA_D = (rs_D != 0 & rs_D == write_reg_M & RegWrite_M);
 	assign ForwardB_D = (rt_D != 0 & rt_D == write_reg_M & RegWrite_M);
 	
@@ -41,16 +44,16 @@ module hazard(
 		ForwardA_E = 2'b00;
 		ForwardB_E = 2'b00;
 		if(rs_E != 0) begin
-			if(rs_E == write_reg_M & RegWrite_M) begin
+			if((rs_E == write_reg_M & RegWrite_M & ~WriteReg_M) | (WriteReg_M & rs_E==5'b11111)) begin
 				ForwardA_E = 2'b10;
-			end else if(rs_E == write_reg_W & RegWrite_W) begin
+			end else if((rs_E == write_reg_W & RegWrite_W & ~WriteReg_W) | ( | (WriteReg_W & rs_E==5'b11111))) begin
 				ForwardA_E = 2'b01;
 			end
 		end
 		if(rt_E != 0) begin
-			if(rt_E == write_reg_M & RegWrite_M) begin
+			if((rt_E == write_reg_M & RegWrite_M & ~WriteReg_M) | (WriteReg_M & rt_E==5'b11111)) begin
 				ForwardB_E = 2'b10;
-			end else if(rt_E == write_reg_W & RegWrite_W) begin
+			end else if((rt_E == write_reg_W & RegWrite_W & ~WriteReg_W) | (WriteReg_W & rt_E==5'b11111)) begin
 				ForwardB_E = 2'b01;
 			end
 		end
@@ -63,9 +66,13 @@ module hazard(
 				MemtoReg_M & (write_reg_M == rs_D | write_reg_M == rt_D)
 				);
 	assign alu_stall_E = ~alu_ready_E;
+	assign jr_stall_D = JumpJr_D & (
+				RegWrite_E & (write_reg_E == rs_D | write_reg_E == rt_D) |
+				MemtoReg_M & (write_reg_M == rs_D | write_reg_M == rt_D)
+				);
 
 	assign Stall_E = alu_stall_E;
-	assign Stall_D = lw_stall_D | branch_stall_D | Stall_E;
+	assign Stall_D = lw_stall_D | branch_stall_D | jr_stall_D | Stall_E;
 	assign Stall_F = Stall_D;
 	
 	assign Flush_M = Stall_E;

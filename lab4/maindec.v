@@ -3,20 +3,29 @@
 `include "defines.vh"
 
 module maindec(
-	input wire[5:0] opcode,
-	input wire[5:0] funct,
+	input wire [5:0] opcode,
+	input wire [5:0] funct,
+	input wire [4:0] rt,
 	
 	output reg [1:0] MemtoReg,
 	output reg MemWrite,
-	output reg Branch,
-	output reg ALUSrcB,
+	output reg ALUSrcA,
+	output reg [1:0] ALUSrcB,
 	output reg RegDst,
 	output reg RegWrite,
-	output reg JumpJ,
 	output reg LoWrite,
 	output reg HiWrite,
 	output reg LoSrc,
 	output reg HiSrc,
+	output reg WriteReg,
+	output reg BranchBeq,
+	output reg BranchBne,
+	output reg BranchBgez,
+	output reg BranchBgtz,
+	output reg BranchBlez,
+	output reg BranchBltz,
+	output reg JumpJ,
+	output reg JumpJr,
 	output reg [7:0] ALUControl
 );
 	// ALUControl
@@ -44,6 +53,7 @@ module maindec(
 					`FUNCT_SUBU:  ALUControl <= `ALU_SUB;
 					`FUNCT_SLT:   ALUControl <= `ALU_SLT;
 					`FUNCT_SLTU:  ALUControl <= `ALU_SLTU;
+					`FUNCT_JALR:  ALUControl <= `ALU_ADD;
 					default: ALUControl <= `ALU_DEFAULT;
 				endcase
 			end
@@ -55,6 +65,14 @@ module maindec(
 			`OP_ADDIU:  ALUControl <= `ALU_ADD;
 			`OP_SLTI:   ALUControl <= `ALU_SLT;
 			`OP_SLTIU:  ALUControl <= `ALU_SLTU;
+			`OP_JAL: 	ALUControl <= `ALU_ADD;
+			`OP_BLTZAL, `OP_BGEZAL: begin 
+				case(rt)
+					`RT_BLTZAL: ALUControl = `ALU_ADD;
+					`RT_BGEZAL: ALUControl <= `ALU_ADD;
+					default: ALUControl <=`ALU_DEFAULT;
+				endcase
+			end
 			default:    ALUControl <= `ALU_DEFAULT;
 		endcase
 	end
@@ -87,26 +105,13 @@ module maindec(
 		endcase
 	end
 
-	// Branch
+	// ALUSrcB[1:0]
 	always @(*) begin
 		case(opcode)
 			`OP_R_TYPE: begin
 				case(funct)
-					
-					default: Branch <= 1'b0;
-				endcase
-			end
-			
-			default: Branch <= 1'b0;
-		endcase
-	end
-
-	// ALUSrcB
-	always @(*) begin
-		case(opcode)
-			`OP_R_TYPE: begin
-				case(funct)
-					default: ALUSrcB <= 1'b0;
+					`FUNCT_JALR: ALUSrcB <= 2'b10;
+					default: ALUSrcB <= 2'b00;
 				endcase
 			end
 			`OP_ANDI,
@@ -116,8 +121,37 @@ module maindec(
 			`OP_ADDI,
 			`OP_ADDIU,
 			`OP_SLTI,
-			`OP_SLTIU: ALUSrcB <= 1'b1;
-			default: ALUSrcB <= 1'b0;
+			`OP_SLTIU: ALUSrcB <= 2'b01;
+			`OP_JAL: ALUSrcB <= 2'b10;
+			`OP_BLTZAL, `OP_BGEZAL: begin 
+				case(rt)
+					`RT_BLTZAL,
+					`RT_BGEZAL: ALUSrcB <= 2'b10;
+					default: ALUSrcB <= 2'b00;
+				endcase
+			end
+			default: ALUSrcB <= 2'b00;
+		endcase
+	end
+
+	// ALUSrcA
+	always @(*) begin
+		case(opcode) 
+			`OP_R_TYPE: begin
+				case(funct)
+					`FUNCT_JALR: ALUSrcA <= 1'b1;
+					default: ALUSrcA <= 1'b0;
+				endcase
+			end
+			`OP_JAL: ALUSrcA <= 1'b1;
+			`OP_BLTZAL, `OP_BGEZAL: begin 
+				case(rt)
+					`RT_BLTZAL,
+					`RT_BGEZAL: ALUSrcA <= 1'b1;
+					default: ALUSrcA <= 1'b0;
+				endcase
+			end
+			default: ALUSrcA <= 1'b0;
 		endcase
 	end
 
@@ -143,7 +177,8 @@ module maindec(
 					`FUNCT_SUB,
 					`FUNCT_SUBU,
 					`FUNCT_SLT,
-					`FUNCT_SLTU:   RegDst <= 1'b1;
+					`FUNCT_SLTU,
+					`FUNCT_JALR:   RegDst <= 1'b1;
 					default: RegDst <= 1'b0;
 				endcase
 			end
@@ -173,7 +208,8 @@ module maindec(
 					`FUNCT_SUB,
 					`FUNCT_SUBU,
 					`FUNCT_SLT,
-					`FUNCT_SLTU:   RegWrite <= 1'b1;
+					`FUNCT_SLTU,
+					`FUNCT_JALR:   RegWrite <= 1'b1;
 					default: RegWrite <= 1'b0;
 				endcase
 			end
@@ -184,20 +220,16 @@ module maindec(
 			`OP_ADDI,
 			`OP_ADDIU,
 			`OP_SLTI,
-			`OP_SLTIU: RegWrite <= 1'b1;
-			default: RegWrite <= 1'b0;
-		endcase
-	end
-
-	// JumpJ
-	always @(*) begin
-		case(opcode) 
-			`OP_R_TYPE: begin
-				case(funct)
-					default: JumpJ <= 1'b0;
+			`OP_SLTIU,
+			`OP_JAL: RegWrite <= 1'b1;
+			`OP_BLTZAL, `OP_BGEZAL: begin 
+				case(rt)
+					`RT_BLTZAL,
+					`RT_BGEZAL: RegWrite <= 1'b1;
+					default: RegWrite <= 1'b0;
 				endcase
 			end
-			default: JumpJ <= 1'b0;
+			default: RegWrite <= 1'b0;
 		endcase
 	end
 
@@ -264,6 +296,109 @@ module maindec(
 				endcase
 			end
 			default: HiSrc <= 1'b0;
+		endcase
+	end
+
+	
+	// WriteReg
+	always @(*) begin
+		case(opcode) 
+			`OP_R_TYPE: begin
+				case(funct)
+					default: WriteReg <= 1'b0;
+				endcase
+			end
+			`OP_JAL: WriteReg <= 1'b1;
+			`OP_BLTZAL, `OP_BGEZAL: begin 
+				case(rt)
+					`RT_BLTZAL,
+					`RT_BGEZAL: WriteReg <= 1'b1;
+					default: WriteReg <= 1'b0;
+				endcase
+			end
+			default: WriteReg <= 1'b0;
+		endcase
+	end
+
+	// JumpJr
+	always @(*) begin
+		case(opcode)
+			`OP_R_TYPE: begin
+				case(funct)
+					`FUNCT_JR,
+					`FUNCT_JALR: JumpJr <= 1'b1;
+					default: JumpJr <= 1'b0;
+				endcase
+			end
+			default: JumpJr <= 1'b0;
+		endcase
+		
+	end
+
+	// JumpJ
+	always @(*) begin
+		case(opcode)
+			`OP_JAL,
+			`OP_J: JumpJ <= 1'b1;
+			default: JumpJ <= 1'b0;
+		endcase
+	end
+
+	// BranchBlez
+	always @(*) begin
+		case(opcode)
+			`OP_BLEZ: BranchBlez <= 1'b1;
+			default: BranchBlez <= 1'b0;
+		endcase
+	end
+
+	// BranchBgtz
+	always @(*) begin
+		case(opcode)
+			`OP_BGTZ: BranchBgtz <= 1'b1;
+			default: BranchBgtz <= 1'b0;
+		endcase
+	end
+
+	// BranchBltz
+	always @(*) begin
+		case(opcode) 
+			`OP_BLTZ: begin
+				case(rt)
+					`RT_BLTZ,`RT_BLTZAL: BranchBltz <= 1'b1;
+					default: BranchBltz <= 1'b0;
+				endcase
+			end
+			default: BranchBltz <= 1'b0;
+		endcase
+	end
+
+	// BranchBgez
+	always @(*) begin
+		case(opcode) 
+			`OP_BGEZ: begin
+				case(rt)
+					`RT_BGEZ,`RT_BGEZAL: BranchBgez <= 1'b1;
+					default: BranchBgez <= 1'b0;
+				endcase
+			end
+			default: BranchBgez <= 1'b0;
+		endcase
+	end
+
+	// BranchBne
+	always @(*) begin
+		case(opcode)
+			`OP_BNE: BranchBne <= 1'b1;
+			default: BranchBne <= 1'b0;
+		endcase
+	end
+
+	// BranchBeq
+	always @(*) begin
+		case(opcode)
+			`OP_BEQ: BranchBeq <= 1'b1;
+			default: BranchBeq <= 1'b0;
 		endcase
 	end
 
