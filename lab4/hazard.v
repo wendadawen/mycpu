@@ -17,23 +17,26 @@ module hazard(
 	input wire [1:0]MemtoReg_E,
 	output reg[1:0] ForwardA_E,ForwardB_E,
 	output wire Flush_E,
+	input wire alu_ready_E,
+	output wire Stall_E,
 	//mem stage
 	input wire[4:0] write_reg_M,
 	input wire RegWrite_M,
 	input wire [1:0]MemtoReg_M,
+	output wire Flush_M,
 
 	//write back stage
 	input wire[4:0] write_reg_W,
 	input wire RegWrite_W
     );
 
-	wire lw_stall_D,branch_stall_D;
+	wire lw_stall_D,branch_stall_D,alu_stall_E;
 
 	// 分支提前造成的数据前推
 	assign ForwardA_D = (rs_D != 0 & rs_D == write_reg_M & RegWrite_M);
 	assign ForwardB_D = (rt_D != 0 & rt_D == write_reg_M & RegWrite_M);
 	
-	// sub add add  OR  lw add 
+	// (sub add add)  OR  (lw add) 
 	always @(*) begin
 		ForwardA_E = 2'b00;
 		ForwardB_E = 2'b00;
@@ -54,12 +57,18 @@ module hazard(
 	end
 	
 	//stalls
-	assign #1 lw_stall_D = MemtoReg_E & (rt_E == rs_D | rt_E == rt_D);
-	assign #1 branch_stall_D = Branch_D & (
+	assign lw_stall_D = MemtoReg_E & (rt_E == rs_D | rt_E == rt_D);
+	assign branch_stall_D = Branch_D & (
 				RegWrite_E & (write_reg_E == rs_D | write_reg_E == rt_D) |
 				MemtoReg_M & (write_reg_M == rs_D | write_reg_M == rt_D)
 				);
-	assign #1 Stall_D = lw_stall_D | branch_stall_D;
-	assign #1 Stall_F = lw_stall_D | branch_stall_D;
-	assign #1 Flush_E = lw_stall_D | branch_stall_D;
+	assign alu_stall_E = ~alu_ready_E;
+
+	assign Stall_E = alu_stall_E;
+	assign Stall_D = lw_stall_D | branch_stall_D | Stall_E;
+	assign Stall_F = Stall_D;
+	
+	assign Flush_M = Stall_E;
+	assign Flush_E = Stall_D & ~Flush_M;
+	
 endmodule
