@@ -12,5 +12,4 @@ module signextend (
             default: out <=  {{16{in[15]}},in[15:0]};
         endcase
     end
-
 endmodule

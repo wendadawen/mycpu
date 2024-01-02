@@ -9,9 +9,9 @@ module datapath(
 	input wire [1:0] PCSrc_D,
 	input wire Branch_D,
 	input wire JumpJr_D,
-	output wire [5:0] opcode_D,funct_D,
-	output wire [4:0] rt_D,
+	output wire [31:0] instr_D,
 	output wire [31:0] a1_D, b1_D,
+	input wire Jump_D,
 	//execute stage
 	input wire [1:0]MemtoReg_E,
 	input wire RegDst_E,
@@ -23,11 +23,12 @@ module datapath(
 	output wire Stall_E,
 	input wire ALUSrcA_E,
 	input wire [1:0] ALUSrcB_E,
+	input wire WriteReg_E,
 	//mem stage
 	input wire [1:0]MemtoReg_M,
 	input wire RegWrite_M,
-	output wire [31:0] aluout_M,write_data_M,
-	input wire [31:0] read_data_M,
+	output wire [31:0] alu_out_M,write_data_M,
+	input wire [31:0] read_word_data_M,
 	output wire Flush_M,
 	input wire WriteReg_M,
 	//writeback stage
@@ -51,6 +52,8 @@ module datapath(
 	wire [31:0] hi_read_data_D, lo_read_data_D;
 	wire [31:0] pc_branch_D, pc_jump_D;
 	wire [4:0] write_regs_D;
+	wire [5:0] opcode_D, funct_D;
+	wire Flush_D;
 
 	//execute stage
 	wire [1:0] ForwardA_E,ForwardB_E;
@@ -58,20 +61,24 @@ module datapath(
 	wire [4:0] write_reg_E;
 	wire [31:0] sign_imm_E;
 	wire [31:0] a_E,a1_E,b_E,b1_E,b2_E;
-	wire [31:0] aluout_E;
+	wire [31:0] alu_out_E;
 	wire [4:0] sa_E;
 	wire [31:0] hi_read_data_E, lo_read_data_E;
 	wire [31:0] hi_write_data_E, lo_write_data_E, hi_out_E, lo_out_E;
 	wire alu_ready_E;
 	wire [31:0] pc_plus4_E, a2_E;
+	wire [31:0] write_data_E;
+	wire [31:0] instr_E;
 
 	//mem stage
 	wire [4:0] write_reg_M;
 	wire [31:0] hi_read_data_M, lo_read_data_M;
+	wire [31:0] read_data_M;
+	wire [31:0] instr_M;
 
 	//writeback stage
 	wire [4:0] write_reg_W;
-	wire [31:0] aluout_W,read_data_W,result_W;
+	wire [31:0] alu_out_W,read_data_W,result_W;
 	wire [31:0] hi_read_data_W, lo_read_data_W;
 
 	//Hazard
@@ -84,6 +91,8 @@ module datapath(
 		ForwardA_D,ForwardB_D,
 		Stall_D,
 		JumpJr_D,
+		Flush_D,
+		Jump_D,
 		//execute stage
 		rs_E,rt_E,
 		write_reg_E,
@@ -93,6 +102,7 @@ module datapath(
 		Flush_E,
 		alu_ready_E,
 		Stall_E,
+		WriteReg_E,
 		//mem stage
 		write_reg_M,
 		RegWrite_M,
@@ -119,8 +129,8 @@ module datapath(
 		a_D,b_D 
 	);
 
-	flopenr #(32) r1D(clk,rst,~Stall_D,pc_plus4_F,pc_plus4_D);
-	flopenr #(32) r2D(clk,rst,~Stall_D,instr_F,instr_D);
+	flopenrc #(32) r1D(clk,rst,~Stall_D,Flush_D, pc_plus4_F,pc_plus4_D);
+	flopenrc #(32) r2D(clk,rst,~Stall_D,Flush_D, instr_F,instr_D);
 
 	assign opcode_D = instr_D[31:26];
 	assign funct_D = instr_D[5:0];
@@ -132,8 +142,8 @@ module datapath(
 	signextend signextend(opcode_D, funct_D, instr_D[15:0], sign_imm_D);
 	assign pc_branch_D = pc_plus4_D + {sign_imm_D[29:0],2'b00};
 	assign pc_jump_D = {pc_plus4_D[31:28],instr_D[25:0],2'b00};
-	assign a1_D = (ForwardA_D) ? aluout_M: a_D;
-	assign b1_D = (ForwardB_D) ? aluout_M: b_D;
+	assign a1_D = (ForwardA_D) ? alu_out_M: a_D;
+	assign b1_D = (ForwardB_D) ? alu_out_M: b_D;
 	hiloreg HI(clk, HiWrite_E & alu_ready_E, hi_write_data_E, hi_read_data_D);
 	hiloreg LO(clk, LoWrite_E & alu_ready_E, lo_write_data_E, lo_read_data_D);
 	assign write_regs_D = (WriteReg_W) ? 5'b11111: write_reg_W;
@@ -150,28 +160,33 @@ module datapath(
 	flopenrc #(32)  r8E(clk,rst,~Stall_E,Flush_E,hi_read_data_D,hi_read_data_E);
 	flopenrc #(32)  r9E(clk,rst,~Stall_E,Flush_E,lo_read_data_D,lo_read_data_E);
 	flopenrc #(32)  r10E(clk,rst,~Stall_E,Flush_E,pc_plus4_D,pc_plus4_E);
+	flopenrc #(32)  r11E(clk,rst,~Stall_E,Flush_E,instr_D,instr_E);
 
-	mux3 #(32) forwardaemux(a_E,result_W,aluout_M,ForwardA_E,a1_E); 
-	mux3 #(32) forwardbemux(b_E,result_W,aluout_M,ForwardB_E,b1_E);
+	mux3 #(32) forwardaemux(a_E,result_W,alu_out_M,ForwardA_E,a1_E); 
+	mux3 #(32) forwardbemux(b_E,result_W,alu_out_M,ForwardB_E,b1_E);
 	mux3 #(32) srcbmux3(b1_E, sign_imm_E, 32'b100, ALUSrcB_E, b2_E);
-	alu alu(clk,rst,a2_E,b2_E,sa_E,ALUControl_E,aluout_E, hi_out_E, lo_out_E, alu_ready_E);
+	alu alu(clk,rst,a2_E,b2_E,sa_E,ALUControl_E,alu_out_E, hi_out_E, lo_out_E, alu_ready_E);
 	assign write_reg_E = (RegDst_E) ? rd_E: rt_E;
 	assign hi_write_data_E = (HiSrc_E) ? hi_out_E: a1_E; 
 	assign lo_write_data_E = (LoSrc_E) ? lo_out_E: a1_E;
 	assign a2_E = (ALUSrcA_E) ? pc_plus4_E: a1_E;
+	storeselect storeselect(instr_E, b1_E, write_data_E);
 
 	//=========================================Memory
-	floprc #(32) r1M(clk,rst,Flush_M,b1_E,write_data_M);
-	floprc #(32) r2M(clk,rst,Flush_M,aluout_E,aluout_M);
+	floprc #(32) r1M(clk,rst,Flush_M,write_data_E,write_data_M);
+	floprc #(32) r2M(clk,rst,Flush_M,alu_out_E,alu_out_M);
 	floprc #(5)  r3M(clk,rst,Flush_M,write_reg_E,write_reg_M);
 	floprc #(32)  r4M(clk,rst,Flush_M,hi_read_data_E,hi_read_data_M);
 	floprc #(32)  r5M(clk,rst,Flush_M,lo_read_data_E,lo_read_data_M);
+	floprc #(32)  r6M(clk,rst,Flush_M,instr_E,instr_M);
+
+	loadselect loadselect(instr_M, read_word_data_M, read_data_M);
 
 	//=========================================Writeback
-	flopr #(32) r1W(clk,rst,aluout_M,aluout_W);
+	flopr #(32) r1W(clk,rst,alu_out_M,alu_out_W);
 	flopr #(32) r2W(clk,rst,read_data_M,read_data_W);
 	flopr #(5)  r3W(clk,rst,write_reg_M,write_reg_W);
 	flopr #(32)  r4W(clk,rst,hi_read_data_M,hi_read_data_W);
 	flopr #(32)  r5W(clk,rst,lo_read_data_M,lo_read_data_W);
-	mux4 #(32) resultWmux4(aluout_W,read_data_W,hi_read_data_W,lo_read_data_W,MemtoReg_W,result_W);
+	mux4 #(32) resultWmux4(alu_out_W,read_data_W,hi_read_data_W,lo_read_data_W,MemtoReg_W,result_W);
 endmodule

@@ -5,11 +5,11 @@ module controller(
 	input wire clk, rst, 
 
 	// decode stage
-	input wire [5:0] opcode_D, funct_D,
-	input wire [4:0] rt_D,
+	input wire [31:0] instr_D,
 	output wire [1:0] PCSrc_D, 
 	output wire Branch_D, JumpJr_D,
 	input wire [31:0] a1_D, b1_D,
+	output wire Jump_D,
 	
 	// execute stage
 	input wire Flush_E,
@@ -21,10 +21,12 @@ module controller(
 	input wire Stall_E,
 	output wire ALUSrcA_E,
 	output wire [1:0] ALUSrcB_E,
+	output wire WriteReg_E,
 
 	// mem stage
 	output wire [1:0] MemtoReg_M, 
-	output wire MemWrite_M, RegWrite_M,
+	output wire [3:0] MemWrite_M, 
+	output wire RegWrite_M,
 	input wire Flush_M,
 	output wire WriteReg_M,
 
@@ -36,26 +38,26 @@ module controller(
 	
 	// decode stage
 	wire [1:0] MemtoReg_D;
-	wire MemWrite_D, RegDst_D, RegWrite_D;
+	wire [3:0] MemWrite_D;
+	wire RegDst_D, RegWrite_D;
 	wire [7:0] ALUControl_D;
 	wire LoWrite_D, HiWrite_D;
 	wire LoSrc_D, HiSrc_D;
 	wire ALUSrcA_D;
 	wire [1:0] ALUSrcB_D;
 	wire WriteReg_D;
-	wire BranchBeq_D,BranchBne_D,BranchBgez_D,BranchBgtz_D,BranchBlez_D,BranchBltz_D,JumpJ_D,Jump_D;
+	wire BranchBeq_D,BranchBne_D,BranchBgez_D,BranchBgtz_D,BranchBlez_D,BranchBltz_D,JumpJ_D;
 
 	// execute stage
-	wire MemWrite_E;
+	wire [3:0] MemWrite_E;
 	wire WriteReg_E;
 
 	// mem stage
 	wire WriteReg_M;
 
 	maindec md(
-		opcode_D,
-		funct_D,
-		rt_D,
+		instr_D,
+
 		MemtoReg_D, 
 		MemWrite_D,
 		ALUSrcA_D,

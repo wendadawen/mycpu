@@ -53,6 +53,15 @@
 `define RT_BLTZ     5'b00000
 `define RT_BLTZAL   5'b10000
 `define RT_BGEZAL   5'b10001
+// load store
+`define OP_LB       6'b100000
+`define OP_LBU      6'b100100
+`define OP_LH       6'b100001
+`define OP_LHU      6'b100101
+`define OP_LW       6'b100011
+`define OP_SB       6'b101000
+`define OP_SH       6'b101001
+`define OP_SW       6'b101011
 
 
 //===========================ALU_OPTION

@@ -3,12 +3,10 @@
 `include "defines.vh"
 
 module maindec(
-	input wire [5:0] opcode,
-	input wire [5:0] funct,
-	input wire [4:0] rt,
+	input wire [31:0] instr,
 	
 	output reg [1:0] MemtoReg,
-	output reg MemWrite,
+	output reg [3:0] MemWrite,
 	output reg ALUSrcA,
 	output reg [1:0] ALUSrcB,
 	output reg RegDst,
@@ -28,6 +26,17 @@ module maindec(
 	output reg JumpJr,
 	output reg [7:0] ALUControl
 );
+
+	wire [5:0] opcode;
+	wire [5:0] funct;
+	wire [4:0] rt;
+	wire [1:0] offest;
+
+	assign opcode = instr[31:26];
+	assign funct = instr[5:0];
+	assign rt = instr[20:16];
+	assign offest = instr[1:0];
+
 	// ALUControl
 	always @(*) begin
 		case(opcode)
@@ -66,6 +75,14 @@ module maindec(
 			`OP_SLTI:   ALUControl <= `ALU_SLT;
 			`OP_SLTIU:  ALUControl <= `ALU_SLTU;
 			`OP_JAL: 	ALUControl <= `ALU_ADD;
+			`OP_SB: 	ALUControl <= `ALU_ADD;
+			`OP_SH: 	ALUControl <= `ALU_ADD;
+			`OP_SW: 	ALUControl <= `ALU_ADD;
+			`OP_LB: 	ALUControl <= `ALU_ADD;
+			`OP_LBU: 	ALUControl <= `ALU_ADD;
+			`OP_LH: 	ALUControl <= `ALU_ADD;
+			`OP_LHU: 	ALUControl <= `ALU_ADD;
+			`OP_LW: 	ALUControl <= `ALU_ADD;
 			`OP_BLTZAL, `OP_BGEZAL: begin 
 				case(rt)
 					`RT_BLTZAL: ALUControl = `ALU_ADD;
@@ -87,21 +104,36 @@ module maindec(
 					default: MemtoReg <= 2'b00;
 				endcase
 			end
+			`OP_LB,
+			`OP_LBU,
+			`OP_LH,
+			`OP_LHU,
+			`OP_LW: MemtoReg <= 2'b01;
 			default: MemtoReg <= 2'b00;
 		endcase
 	end
 
-	// MemWrite
+	// MemWrite[3:0]
 	always @(*) begin
 		case(opcode)
-			`OP_R_TYPE: begin
-				case(funct)
-					
-					default: MemWrite <= 1'b0;
+			`OP_SW: MemWrite <= 4'b1111;
+			`OP_SH: begin
+				case(offest)
+					2'b10: MemWrite <= 4'b1100;
+					// 2'b10: MemWrite <= 4'b0110;
+					2'b00: MemWrite <= 4'b0011;
+					default: MemWrite <= 4'b0000;
 				endcase
 			end
-			
-			default: MemWrite <= 1'b0;
+			`OP_SB: begin
+				case(offest)
+					2'b11: MemWrite <= 4'b1000;
+					2'b10: MemWrite <= 4'b0100;
+					2'b01: MemWrite <= 4'b0010;
+					2'b00: MemWrite <= 4'b0001;
+				endcase
+			end
+			default: MemWrite <= 4'b0000;
 		endcase
 	end
 
@@ -121,7 +153,15 @@ module maindec(
 			`OP_ADDI,
 			`OP_ADDIU,
 			`OP_SLTI,
-			`OP_SLTIU: ALUSrcB <= 2'b01;
+			`OP_SLTIU,
+			`OP_SB,
+			`OP_SH,
+			`OP_SW,
+			`OP_LB,
+			`OP_LBU,
+			`OP_LH,
+			`OP_LHU,
+			`OP_LW: ALUSrcB <= 2'b01;
 			`OP_JAL: ALUSrcB <= 2'b10;
 			`OP_BLTZAL, `OP_BGEZAL: begin 
 				case(rt)
@@ -221,7 +261,12 @@ module maindec(
 			`OP_ADDIU,
 			`OP_SLTI,
 			`OP_SLTIU,
-			`OP_JAL: RegWrite <= 1'b1;
+			`OP_JAL,
+			`OP_LB,
+			`OP_LBU,
+			`OP_LH,
+			`OP_LHU,
+			`OP_LW: RegWrite <= 1'b1;
 			`OP_BLTZAL, `OP_BGEZAL: begin 
 				case(rt)
 					`RT_BLTZAL,
