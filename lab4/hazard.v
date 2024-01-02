@@ -22,40 +22,37 @@ module hazard(
 	output wire Flush_E,
 	input wire alu_ready_E,
 	output wire Stall_E,
-	input wire WriteReg_E,
 	//mem stage
 	input wire [4:0] write_reg_M,
 	input wire RegWrite_M,
 	input wire [1:0] MemtoReg_M,
 	output wire Flush_M,
-	input wire WriteReg_M,
 
 	//write back stage
 	input wire[4:0] write_reg_W,
-	input wire RegWrite_W,
-	input wire WriteReg_W
+	input wire RegWrite_W
 );
 
 	wire lw_stall_D,branch_stall_D,alu_stall_E,jr_stall_D;
 
-	assign ForwardA_D = (rs_D != 0 & rs_D == write_reg_M & RegWrite_M & ~WriteReg_M) | (WriteReg_M & rs_D==5'b11111);
-	assign ForwardB_D = (rt_D != 0 & rt_D == write_reg_M & RegWrite_M & ~WriteReg_M) | (WriteReg_M & rt_D==5'b11111);
+	assign ForwardA_D = (rs_D != 0 & rs_D == write_reg_M & RegWrite_M);
+	assign ForwardB_D = (rt_D != 0 & rt_D == write_reg_M & RegWrite_M);
 	
 	// (sub add add)  OR  (lw add) 
 	always @(*) begin
 		ForwardA_E = 2'b00;
 		ForwardB_E = 2'b00;
 		if(rs_E != 0) begin
-			if(RegWrite_M & ((rs_E==write_reg_M & ~WriteReg_M) | (WriteReg_M & rs_E==5'b11111))) begin
+			if(RegWrite_M & rs_E==write_reg_M) begin
 				ForwardA_E = 2'b10;
-			end else if(RegWrite_W & ((rs_E==write_reg_W & ~WriteReg_W) | (WriteReg_W & rs_E==5'b11111))) begin
+			end else if(RegWrite_W & rs_E==write_reg_W) begin
 				ForwardA_E = 2'b01;
 			end
 		end
 		if(rt_E != 0) begin
-			if(RegWrite_M & ((rt_E==write_reg_M & ~WriteReg_M) | (WriteReg_M & rt_E==5'b11111))) begin
+			if(RegWrite_M & rt_E==write_reg_M) begin
 				ForwardB_E = 2'b10;
-			end else if(RegWrite_W & ((rt_E==write_reg_W & ~WriteReg_W) | (WriteReg_W & rt_E==5'b11111))) begin
+			end else if(RegWrite_W & rt_E==write_reg_W) begin
 				ForwardB_E = 2'b01;
 			end
 		end
@@ -64,13 +61,13 @@ module hazard(
 	//stalls
 	assign lw_stall_D = MemtoReg_E & (rt_E==rs_D | rt_E==rt_D);
 	assign branch_stall_D = Branch_D & (
-				RegWrite_E & ((write_reg_E==rs_D | write_reg_E==rt_D & ~WriteReg_E) | (rs_D==5'b11111 | rt_D==5'b11111 & WriteReg_E)) |
-				MemtoReg_M & ((write_reg_M==rs_D | write_reg_M==rt_D & ~WriteReg_M) | (rs_D==5'b11111 | rt_D==5'b11111 & WriteReg_M))
+				RegWrite_E & (write_reg_E==rs_D | write_reg_E==rt_D) |
+				MemtoReg_M & (write_reg_M==rs_D | write_reg_M==rt_D)
 				);
 	assign alu_stall_E = ~alu_ready_E;
 	assign jr_stall_D = JumpJr_D & (
-				RegWrite_E & ((write_reg_E==rs_D | write_reg_E==rt_D & ~WriteReg_E) | (rs_D==5'b11111 | rt_D==5'b11111 & WriteReg_E)) |
-				MemtoReg_M & ((write_reg_M==rs_D | write_reg_M==rt_D & ~WriteReg_M) | (rs_D==5'b11111 | rt_D==5'b11111 & WriteReg_M))
+				RegWrite_E & (write_reg_E==rs_D | write_reg_E==rt_D) |
+				MemtoReg_M & (write_reg_M==rs_D | write_reg_M==rt_D)
 				);
 
 	assign Stall_E = alu_stall_E;

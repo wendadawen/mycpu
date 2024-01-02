@@ -30,11 +30,9 @@ module datapath(
 	output wire [31:0] alu_out_M,write_data_M,
 	input wire [31:0] read_word_data_M,
 	output wire Flush_M,
-	input wire WriteReg_M,
 	//writeback stage
 	input wire [1:0]MemtoReg_W,
-	input wire RegWrite_W,
-	input wire WriteReg_W
+	input wire RegWrite_W
 );
 	
 	//fetch stage
@@ -51,7 +49,6 @@ module datapath(
 	wire [4:0] sa_D;
 	wire [31:0] hi_read_data_D, lo_read_data_D;
 	wire [31:0] pc_branch_D, pc_jump_D;
-	wire [4:0] write_regs_D;
 	wire [5:0] opcode_D, funct_D;
 	wire Flush_D;
 
@@ -102,17 +99,14 @@ module datapath(
 		Flush_E,
 		alu_ready_E,
 		Stall_E,
-		WriteReg_E,
 		//mem stage
 		write_reg_M,
 		RegWrite_M,
 		MemtoReg_M,
 		Flush_M,
-		WriteReg_M,
 		//write back stage
 		write_reg_W,
-		RegWrite_W,
-		WriteReg_W
+		RegWrite_W
 	);
 	
 	//===============================Fetch
@@ -124,7 +118,7 @@ module datapath(
 	regfile rf(
 		clk,
 		RegWrite_W,
-		rs_D,rt_D,write_regs_D, 
+		rs_D,rt_D,write_reg_W, 
 		result_W,
 		a_D,b_D 
 	);
@@ -146,7 +140,6 @@ module datapath(
 	assign b1_D = (ForwardB_D) ? alu_out_M: b_D;
 	hiloreg HI(clk, HiWrite_E & alu_ready_E, hi_write_data_E, hi_read_data_D);
 	hiloreg LO(clk, LoWrite_E & alu_ready_E, lo_write_data_E, lo_read_data_D);
-	assign write_regs_D = (WriteReg_W) ? 5'b11111: write_reg_W;
 
 
 	//===============================Execute
@@ -166,7 +159,8 @@ module datapath(
 	mux3 #(32) forwardbemux(b_E,result_W,alu_out_M,ForwardB_E,b1_E);
 	mux3 #(32) srcbmux3(b1_E, sign_imm_E, 32'b100, ALUSrcB_E, b2_E);
 	alu alu(clk,rst,a2_E,b2_E,sa_E,ALUControl_E,alu_out_E, hi_out_E, lo_out_E, alu_ready_E);
-	assign write_reg_E = (RegDst_E) ? rd_E: rt_E;
+	assign write_reg_E = (WriteReg_E) ? 5'b11111:
+						( RegDst_E  ) ? rd_E: rt_E;
 	assign hi_write_data_E = (HiSrc_E) ? hi_out_E: a1_E; 
 	assign lo_write_data_E = (LoSrc_E) ? lo_out_E: a1_E;
 	assign a2_E = (ALUSrcA_E) ? pc_plus4_E: a1_E;

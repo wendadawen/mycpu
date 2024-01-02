@@ -28,12 +28,10 @@ module controller(
 	output wire [3:0] MemWrite_M, 
 	output wire RegWrite_M,
 	input wire Flush_M,
-	output wire WriteReg_M,
 
 	// write back stage
 	output wire [1:0] MemtoReg_W, 
-	output wire RegWrite_W,
-	output wire WriteReg_W
+	output wire RegWrite_W
 );
 	
 	// decode stage
