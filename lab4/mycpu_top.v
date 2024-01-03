@@ -33,7 +33,7 @@ module mycpu_top(
 	wire [31:0] aluout, writedata, readdata;
     wire [31:0] pc_W;
 	wire RegWrite_W;
-	wire write_reg_W;
+	wire [4:0] write_reg_W;
 	wire [31:0] result_W;
     mips mips(
         .clk(~clk),
@@ -74,6 +74,11 @@ module mycpu_top(
     assign debug_wb_rf_wen = {4{RegWrite_W}};
     assign debug_wb_rf_wnum = write_reg_W;
     assign debug_wb_rf_wdata = result_W;
+
+    //ascii
+    instdec instdec(
+        .instr(instr)
+    );
 
 
 endmodule

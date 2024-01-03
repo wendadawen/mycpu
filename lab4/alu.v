@@ -12,25 +12,15 @@ module alu(
 	output wire ready,
 	output reg overflow,
 	output reg zero
-    );
+);
 	// div
 	wire div_start,div_signed,div_ready;
 	wire [63:0] div_result;
 	assign div_signed = (ALUControl==`ALU_DIV) ? 1'b1: 1'b0;
 	assign div_start = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU) & ~div_ready) ? 1'b1: 1'b0;
-	div div(
-		.clk(clk),
-		.rst(rst),
-		.signed_div_i(div_signed),
-		.opdata1_i(a),
-		.opdata2_i(b),
-		.start_i(div_start),
-		.annul_i(1'b0),
-		.result_o(div_result),
-		.ready_o(div_ready)
-	);
+	div div(clk,rst,div_signed,a,b,div_start,1'b0,div_result,div_ready);
 	// is ready result?
-	assign ready = (ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU) ? div_ready: 1'b1;
+	assign ready = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU)) ? ~(div_start): 1'b1;
 	// others
 	always @(*) begin
 		case(ALUControl) 
@@ -42,9 +32,9 @@ module alu(
 			`ALU_SLL: result <= b << sa;
 			`ALU_SRL: result <= b >> sa;
 			`ALU_SRA: result <= $signed(b) >>> sa;
-			`ALU_SLLV: result <= b << a;
-			`ALU_SRLV: result <= b >> a;
-			`ALU_SRAV: result <= $signed(b) >>> a;
+			`ALU_SLLV: result <= b << a[4:0];
+			`ALU_SRLV: result <= b >> a[4:0];
+			`ALU_SRAV: result <= $signed(b) >>> a[4:0];
 			`ALU_ADD: result <= a + b;
 			`ALU_SUB: result <= a - b;
 			`ALU_SLT: result <= ($signed(a) < $signed(b)) ? 32'b1:32'b0;

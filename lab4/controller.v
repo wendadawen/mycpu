@@ -7,9 +7,10 @@ module controller(
 	// decode stage
 	input wire [31:0] instr_D,
 	output wire [1:0] PCSrc_D, 
-	output wire Branch_D, JumpJr_D,
+	output wire Branch1_D, Branch2_D, JumpJr_D,
 	input wire [31:0] a1_D, b1_D,
 	output wire Jump_D,
+	output wire [7:0] ALUControl_D,
 	
 	// execute stage
 	input wire Flush_E,
@@ -44,6 +45,7 @@ module controller(
 	wire ALUSrcA_D;
 	wire [1:0] ALUSrcB_D;
 	wire WriteReg_D;
+	wire is_branch;
 	wire BranchBeq_D,BranchBne_D,BranchBgez_D,BranchBgtz_D,BranchBlez_D,BranchBltz_D,JumpJ_D;
 
 	// execute stage
@@ -77,15 +79,17 @@ module controller(
 		JumpJr_D,
 		ALUControl_D
 	);
-	assign Branch_D = (BranchBeq_D & (a1_D==b1_D)) | 
+	assign Branch1_D = BranchBeq_D|BranchBne_D;
+	assign Branch2_D = BranchBgez_D|BranchBgtz_D|BranchBlez_D|BranchBltz_D;
+	assign is_branch = (BranchBeq_D & (a1_D==b1_D)) | 
 					(  BranchBne_D & (a1_D!=b1_D)) | 
 					( BranchBgez_D & ($signed(a1_D)>=0)) | 
 					( BranchBgtz_D & ($signed(a1_D)>0)) | 
 					( BranchBlez_D & ($signed(a1_D)<=0)) | 
 					( BranchBltz_D & ($signed(a1_D)<0));
 	assign Jump_D = JumpJ_D | JumpJr_D;
-	assign PCSrc_D = (Jump_D==1'b0&Branch_D==1'b0) ? 2'b00:
-					( Branch_D==1'b1) ? 2'b01:
+	assign PCSrc_D = (Jump_D==1'b0&is_branch==1'b0) ? 2'b00:
+					( is_branch==1'b1) ? 2'b01:
 					( JumpJ_D==1'b1) ? 2'b10: 2'b11;
 
 	// pipeline registers
