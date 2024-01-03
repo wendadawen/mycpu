@@ -17,7 +17,6 @@ module controller(
 	output wire [1:0] MemtoReg_E, 
 	output wire RegDst_E, RegWrite_E,
 	output wire [7:0] ALUControl_E,
-	output wire LoWrite_E, HiWrite_E,
 	output wire LoSrc_E, HiSrc_E,
 	input wire Stall_E,
 	output wire ALUSrcA_E,
@@ -32,7 +31,8 @@ module controller(
 
 	// write back stage
 	output wire [1:0] MemtoReg_W, 
-	output wire RegWrite_W
+	output wire RegWrite_W,
+	output wire LoWrite_W, HiWrite_W
 );
 	
 	// decode stage
@@ -51,9 +51,11 @@ module controller(
 	// execute stage
 	wire [3:0] MemWrite_E;
 	wire WriteReg_E;
+	wire LoWrite_E, HiWrite_E;
 
 	// mem stage
 	wire WriteReg_M;
+	wire LoWrite_M, HiWrite_M;
 
 	maindec md(
 		instr_D,
@@ -103,14 +105,14 @@ module controller(
 	floprc #(32) regM(
 		clk, rst,
 		Flush_M,
-		{WriteReg_E, MemtoReg_E, MemWrite_E, RegWrite_E},
-		{WriteReg_M, MemtoReg_M, MemWrite_M, RegWrite_M}
+		{LoWrite_E, HiWrite_E, WriteReg_E, MemtoReg_E, MemWrite_E, RegWrite_E},
+		{LoWrite_M, HiWrite_M, WriteReg_M, MemtoReg_M, MemWrite_M, RegWrite_M}
 	);
 
 	flopr #(32) regW(
 		clk, rst,
-		{WriteReg_M, MemtoReg_M, RegWrite_M},
-		{WriteReg_W, MemtoReg_W, RegWrite_W}
+		{LoWrite_M, HiWrite_M, WriteReg_M, MemtoReg_M, RegWrite_M},
+		{LoWrite_W, HiWrite_W,WriteReg_W, MemtoReg_W, RegWrite_W}
 	);
 endmodule
 

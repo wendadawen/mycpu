@@ -48,7 +48,6 @@ module mips(
 		memtoregE,
 		regdstE,regwriteE,	
 		alucontrolE,
-		LoWrite_E, HiWrite_E,
 		LoSrc_E, HiSrc_E,
 		Stall_E,
 		ALUSrcA_E,ALUSrcB_E,
@@ -60,7 +59,8 @@ module mips(
 		Flush_M,
 
 		//write back stage
-		memtoregW,RegWrite_W
+		memtoregW,RegWrite_W,
+		LoWrite_W, HiWrite_W
 	);
 	datapath dp(
 		clk,rst,
@@ -80,7 +80,6 @@ module mips(
 		regwriteE,
 		alucontrolE,
 		flushE,
-		LoWrite_E, HiWrite_E,
 		LoSrc_E, HiSrc_E,
 		Stall_E,
 		ALUSrcA_E,ALUSrcB_E,
@@ -96,7 +95,8 @@ module mips(
 		RegWrite_W,
 		write_reg_W,
 		result_W,
-		pc_W
+		pc_W,
+		LoWrite_W, HiWrite_W
 	);
 	
 endmodule
