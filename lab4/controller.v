@@ -2,70 +2,69 @@
 
 
 module controller(
-	input wire clk, rst, 
+	input clk, rst, 
 
-	// decode stage
-	input wire [31:0] instr_D,
-	output wire Branch1_D, Branch2_D, JumpJr_D,
-	input wire [31:0] a1_D, b1_D,
-	output wire [7:0] ALUControl_D,
-	output wire Jump_D,
+	/**************DEC****************/
+	input instr_D,
+	output Branch1_D, Branch2_D, JumpJr_D,
+	input a1_D, b1_D,
+	output ALUControl_D,
+	output Jump_D,
 	
-	// execute stage
-	input wire Flush_E,
-	output wire [1:0] MemtoReg_E, 
-	output wire RegDst_E, RegWrite_E,
-	output wire [7:0] ALUControl_E,
-	output wire LoSrc_E, HiSrc_E,
-	input wire Stall_E,
-	output wire ALUSrcA_E,
-	output wire [1:0] ALUSrcB_E,
-	output wire WriteReg_E,
-	output wire Jump_E,
+	/**************EXE****************/
+	input Flush_E,
+	output MemtoReg_E, 
+	output RegDst_E, RegWrite_E,
+	output ALUControl_E,
+	output LoSrc_E, HiSrc_E,
+	input Stall_E,
+	output ALUSrcA_E,
+	output ALUSrcB_E,
+	output WriteReg_E,
+	output Jump_E,
 
-	// mem stage
-	output wire [1:0] MemtoReg_M, 
-	output wire [3:0] MemWrite_M, 
-	output wire RegWrite_M,
-	input wire Flush_M,
-	output wire Jump_M,
+	/**************MEM****************/
+	output MemtoReg_M, 
+	output MemWrite_M, 
+	output RegWrite_M,
+	input Flush_M,
+	output Jump_M,
 
-	// write back stage
-	output wire [1:0] MemtoReg_W, 
-	output wire RegWrite_W,
-	output wire LoWrite_W, HiWrite_W,
-	output wire [1:0] PCSrc_W,
-	output wire Jump_W
+	/**************WB****************/
+	output MemtoReg_W, 
+	output RegWrite_W,
+	output LoWrite_W, HiWrite_W,
+	output PCSrc_W,
+	output Jump_W
 );
+
+	wire clk, rst;
+	wire [31:0] instr_D, a1_D, b1_D;
+
+	wire [7:0] ALUControl_D, ALUControl_E;
+	wire [1:0] MemtoReg_D, MemtoReg_E, MemtoReg_M, MemtoReg_W;
+	wire RegDst_D, RegDst_E;
+	wire RegWrite_D, RegWrite_E, RegWrite_M, RegWrite_W;
+	wire WriteReg_D, WriteReg_E, WriteReg_M;
+	wire [3:0] MemWrite_D, MemWrite_E, MemWrite_M;
+	wire LoWrite_D, LoWrite_E, LoWrite_M, LoWrite_W;
+	wire HiWrite_D, HiWrite_E, HiWrite_M, HiWrite_W;
+	wire ALUSrcA_D, ALUSrcA_E;
+	wire [1:0] ALUSrcB_D, ALUSrcB_E;
+	wire LoSrc_D, LoSrc_E;
+	wire HiSrc_D, HiSrc_E;
+
+	wire Stall_E;
+	wire Flush_E, Flush_M;
 	
-	// decode stage
-	wire [1:0] MemtoReg_D;
-	wire [3:0] MemWrite_D;
-	wire RegDst_D, RegWrite_D;
-	wire [7:0] ALUControl_D;
-	wire LoWrite_D, HiWrite_D;
-	wire LoSrc_D, HiSrc_D;
-	wire ALUSrcA_D;
-	wire [1:0] ALUSrcB_D;
-	wire WriteReg_D;
-	wire is_branch;
-	wire BranchBeq_D,BranchBne_D,BranchBgez_D,BranchBgtz_D,BranchBlez_D,BranchBltz_D,JumpJ_D;
-	wire [1:0] PCSrc_D;
+	wire [1:0] PCSrc_D, PCSrc_E, PCSrc_M, PCSrc_W;
+	wire BranchBeq_D,BranchBne_D,BranchBgez_D,BranchBgtz_D,BranchBlez_D,BranchBltz_D,JumpJ_D, JumpJr_D, Branch_D;
+	wire Branch1_D, Branch2_D;
+	wire Jump_D, Jump_E, Jump_M, Jump_W;
 
-	// execute stage
-	wire [3:0] MemWrite_E;
-	wire WriteReg_E;
-	wire LoWrite_E, HiWrite_E;
-	wire [1:0] PCSrc_E;
-
-	// mem stage
-	wire WriteReg_M;
-	wire LoWrite_M, HiWrite_M;
-	wire [1:0] PCSrc_M;
 
 	maindec md(
 		instr_D,
-
 		MemtoReg_D, 
 		MemWrite_D,
 		ALUSrcA_D,
@@ -89,18 +88,17 @@ module controller(
 	);
 	assign Branch1_D = BranchBeq_D|BranchBne_D;
 	assign Branch2_D = BranchBgez_D|BranchBgtz_D|BranchBlez_D|BranchBltz_D;
-	assign is_branch = (BranchBeq_D & (a1_D==b1_D)) | 
+	assign Branch_D = (BranchBeq_D & (a1_D==b1_D)) | 
 					(  BranchBne_D & (a1_D!=b1_D)) | 
 					( BranchBgez_D & ($signed(a1_D)>=0)) | 
 					( BranchBgtz_D & ($signed(a1_D)>0)) | 
 					( BranchBlez_D & ($signed(a1_D)<=0)) | 
 					( BranchBltz_D & ($signed(a1_D)<0));
-	assign Jump_D = JumpJ_D | JumpJr_D | is_branch;
-	assign PCSrc_D = ((JumpJ_D|JumpJr_D)==1'b0&is_branch==1'b0) ? 2'b00:
-					( is_branch==1'b1) ? 2'b01:
+	assign Jump_D = JumpJ_D | JumpJr_D | Branch_D;
+	assign PCSrc_D = ((JumpJ_D|JumpJr_D)==1'b0&Branch_D==1'b0) ? 2'b00:
+					( Branch_D==1'b1) ? 2'b01:
 					( JumpJ_D==1'b1) ? 2'b10: 2'b11;
 
-	// pipeline registers
 	flopenrc #(32) regE(
 		clk, rst,
 		~Stall_E, Flush_E, 
@@ -121,4 +119,3 @@ module controller(
 		{Jump_W, PCSrc_W, LoWrite_W, HiWrite_W,WriteReg_W, MemtoReg_W, RegWrite_W}
 	);
 endmodule
-

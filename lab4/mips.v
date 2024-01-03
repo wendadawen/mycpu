@@ -32,18 +32,21 @@ module mips(
 	wire [31:0] a1_D, b1_D;
 	wire Jump_D;
 	wire [7:0] ALUControl_D;
+	wire Branch1_D,Branch2_D;
+	wire Jump_E, Jump_M, Jump_W;
+	wire LoWrite_W, HiWrite_W;
 
 	controller c(
 		clk,rst,
 
-		//decode stage
+		/**************DEC****************/
 		instr_D,
 		Branch1_D,Branch2_D,JumpJr_D,
 		a1_D, b1_D,
 		ALUControl_D,
 		Jump_D,
 		
-		//execute stage
+		/**************EXE****************/
 		flushE,
 		memtoregE,
 		regdstE,regwriteE,	
@@ -54,13 +57,13 @@ module mips(
 		WriteReg_E,
 		Jump_E,
 
-		//mem stage
+		/**************MEM****************/
 		memtoregM,memwriteM,
 		regwriteM,
 		Flush_M,
 		Jump_M,
 
-		//write back stage
+		/**************WB****************/
 		memtoregW,RegWrite_W,
 		LoWrite_W, HiWrite_W,
 		PCSrc_W,
@@ -68,17 +71,17 @@ module mips(
 	);
 	datapath dp(
 		clk,rst,
-		//fetch stage
+		/**************FET****************/
 		pcF,
 		instrF,
-		//decode stage
+		/**************DEC****************/
 		Branch1_D,Branch2_D,
 		JumpJr_D,
 		instr_D,
 		a1_D, b1_D,
 		ALUControl_D,
 		Jump_D,
-		//execute stage
+		/**************EXE****************/
 		memtoregE,
 		regdstE,
 		regwriteE,
@@ -89,14 +92,14 @@ module mips(
 		ALUSrcA_E,ALUSrcB_E,
 		WriteReg_E,
 		Jump_E,
-		//mem stage
+		/**************MEM****************/
 		memtoregM,
 		regwriteM,
 		aluoutM,writedataM,
 		readdataM,
 		Flush_M,
 		Jump_M,
-		//writeback stage
+		/**************WB****************/
 		memtoregW,
 		RegWrite_W,
 		write_reg_W,

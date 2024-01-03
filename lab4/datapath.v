@@ -1,105 +1,105 @@
 `timescale 1ns / 1ps
 
 module datapath(
-	input wire clk,rst,
-	//fetch stage
-	output wire [31:0] pc_F,
-	input wire [31:0] instr_F,
-	//decode stage
-	input wire Branch1_D,Branch2_D,
-	input wire JumpJr_D,
-	output wire [31:0] instr_D,
-	output wire [31:0] a1_D, b1_D,
-	input wire [7:0] ALUControl_D,
-	input wire Jump_D,
-	//execute stage
-	input wire [1:0]MemtoReg_E,
-	input wire RegDst_E,
-	input wire RegWrite_E,
-	input wire[7:0] ALUControl_E,
-	output wire Flush_E,
-	input wire LoSrc_E, HiSrc_E,
-	output wire Stall_E,
-	input wire ALUSrcA_E,
-	input wire [1:0] ALUSrcB_E,
-	input wire WriteReg_E,
-	input wire Jump_E,
-	//mem stage
-	input wire [1:0]MemtoReg_M,
-	input wire RegWrite_M,
-	output wire [31:0] alu_out_M,write_data_M,
-	input wire [31:0] read_word_data_M,
-	output wire Flush_M,
-	input wire Jump_M,
-	//writeback stage
-	input wire [1:0]MemtoReg_W,
-	input wire RegWrite_W,
-	output wire [4:0] write_reg_W,
-	output wire [31:0] result_W,pc_W,
-	input wire LoWrite_W, HiWrite_W,
-	input wire [1:0] PCSrc_W,
-	input wire Jump_W
+	input clk,rst,
+	/**************FET****************/
+	output pc_F,
+	input instr_F,
+	/**************DEC****************/
+	input Branch1_D,
+	input Branch2_D,
+	input JumpJr_D,
+	output instr_D,
+	output a1_D,
+	output b1_D,
+	input ALUControl_D,
+	input Jump_D,
+	/**************EXE****************/
+	input MemtoReg_E,
+	input RegDst_E,
+	input RegWrite_E,
+	input ALUControl_E,
+	output Flush_E,
+	input LoSrc_E, 
+	input HiSrc_E,
+	output Stall_E,
+	input ALUSrcA_E,
+	input ALUSrcB_E,
+	input WriteReg_E,
+	input Jump_E,
+	/**************MEM****************/
+	input MemtoReg_M,
+	input RegWrite_M,
+	output alu_out_M,
+	output write_data_M,
+	input read_word_data_M,
+	output Flush_M,
+	input Jump_M,
+	/**************WB****************/
+	input MemtoReg_W,
+	input RegWrite_W,
+	output write_reg_W,
+	output result_W,pc_W,
+	input LoWrite_W, HiWrite_W,
+	input PCSrc_W,
+	input Jump_W
 );
-	
-	//fetch stage
-	wire Stall_F;
-	wire [31:0] pc_next_F, pc_plus4_F;
-
-	//decode stage
-	wire [31:0] pc_plus4_D,instr_D;
-	wire ForwardA_D,ForwardB_D;
-	wire [4:0] rs_D,rt_D,rd_D;
-	wire Stall_D; 
-	wire [31:0] sign_imm_D;
-	wire [31:0] a_D,b_D;
-	wire [4:0] sa_D;
-	wire [31:0] pc_branch_D, pc_jump_D;
-	wire [5:0] opcode_D, funct_D;
-	wire Flush_D;
-	wire [31:0] pc_D;
-	wire [31:0] hi_write_data_D, lo_write_data_D;
-
-	//execute stage
-	wire [1:0] ForwardA_E,ForwardB_E;
-	wire [4:0] rs_E,rt_E,rd_E;
-	wire [4:0] write_reg_E;
-	wire [31:0] sign_imm_E;
-	wire [31:0] a_E,a1_E,b_E,b1_E,b2_E;
-	wire [31:0] alu_out_E;
-	wire [4:0] sa_E;
-	wire [31:0] hi_write_data_E, lo_write_data_E, hi_out_E, lo_out_E;
-	wire alu_ready_E;
-	wire [31:0] pc_plus4_E, a2_E;
-	wire [31:0] write_data_E;
-	wire [31:0] instr_E;
-	wire [31:0] pc_E;
-	wire [31:0] pc_jump_E, pc_branch_E;
-
-	//mem stage
-	wire [4:0] write_reg_M;
-	wire [31:0] hi_read_data_M, lo_read_data_M;
-	wire [31:0] read_data_M;
-	wire [31:0] instr_M;
-	wire [31:0] pc_M;
-	wire alu_ready_M;
-	wire [31:0] hi_write_data_M, lo_write_data_M;
+	wire clk, rst;
+	wire [31:0] pc_next_F;
+	wire [31:0] pc_F, pc_D, pc_E, pc_M, pc_W;
+	wire [31:0] pc_plus4_F, pc_plus4_D, pc_plus4_E, pc_plus4_M, pc_plus4_W;
+	wire [31:0] instr_F, instr_D, instr_E, instr_M;
+	wire [31:0] read_word_data_M;
+	wire [4:0] rs_D,rs_E;
+	wire [4:0] rt_D,rt_E;
+	wire [4:0] rd_D,rd_E;
+	wire [31:0] sign_imm_D, sign_imm_E;
+	wire [31:0] a_D,a_E, a_M, a_W;
+	wire [31:0] b_D, b_E;
+	wire [31:0] a1_D, a1_E;
+	wire [31:0] a2_E;
+	wire [31:0] b1_D, b1_E;
+	wire [31:0] b2_E;
+	wire [4:0] sa_D, sa_E;
+	wire [31:0] pc_branch_D, pc_branch_E, pc_branch_M, pc_branch_W;
+	wire [31:0] pc_jump_D, pc_jump_E, pc_jump_M, pc_jump_W;
+	wire [5:0] opcode_D;
+	wire [5:0] funct_D;
+	wire [31:0] hi_write_data_D, hi_write_data_E, hi_write_data_M, hi_write_data_W;
+	wire [31:0] lo_write_data_D, lo_write_data_E, lo_write_data_M, lo_write_data_W;
+	wire [4:0] write_reg_E, write_reg_M, write_reg_W;
+	wire [31:0] alu_out_E, alu_out_M, alu_out_W;
+	wire [31:0] hi_out_E;
+	wire [31:0] lo_out_E;
+	wire alu_ready_E, alu_ready_M, alu_ready_W;
+	wire [31:0] write_data_E, write_data_M;
+	wire [31:0] hi_read_data_M, hi_read_data_W;
+	wire [31:0] lo_read_data_W, lo_read_data_M;
+	wire [31:0] read_data_M, read_data_W;
 	wire [31:0] hi_read_data1_M, lo_read_data1_M;
-	wire  ForwardHi_M, ForwardLo_M;
-	wire [31:0] a_M;
-	wire [31:0] pc_jump_M;
-	wire [31:0] pc_plus4_M, pc_branch_M;
-
-	//writeback stage
-	wire [4:0] write_reg_W;
-	wire [31:0] alu_out_W,read_data_W,result_W;
-	wire [31:0] hi_read_data_W, lo_read_data_W;
-	wire [31:0] pc_W;
-	wire alu_ready_W;
-	wire [31:0] hi_write_data_W, lo_write_data_W;
-	wire [31:0] a_W;
-	wire [31:0] pc_jump_W;
-	wire [31:0] pc_plus4_W, pc_branch_W;
+	wire [31:0] result_W;
 	
+	wire WriteReg_E;
+	wire RegDst_E;
+	wire RegWrite_E, RegWrite_M, RegWrite_W;
+	wire LoWrite_W,HiWrite_W;
+	wire LoSrc_E, HiSrc_E;
+	wire ALUSrcA_E;
+	wire [1:0] ALUSrcB_E;
+	wire [1:0] MemtoReg_E, MemtoReg_M, MemtoReg_W;
+	wire [7:0] ALUControl_D, ALUControl_E;
+	wire [1:0] PCSrc_W;
+	wire Branch1_D;
+	wire Branch2_D;
+	wire JumpJr_D;
+	wire Jump_D, Jump_E, Jump_M, Jump_W;
+	
+	wire Stall_F, Stall_D, Stall_E;
+	wire ForwardA_D,ForwardB_D;
+	wire [1:0] ForwardA_E,ForwardB_E;
+	wire Flush_D, Flush_E, Flush_M;
+	wire  ForwardHi_M, ForwardLo_M;
+
 
 	//Hazard
 	hazard h(
@@ -163,7 +163,6 @@ module datapath(
 	assign rt_D = instr_D[20:16];
 	assign rd_D = instr_D[15:11];
 	assign sa_D = instr_D[10:6];
-
 	signextend signextend(opcode_D, funct_D, instr_D[15:0], sign_imm_D);
 	assign pc_branch_D = pc_plus4_D + {sign_imm_D[29:0],2'b00};
 	assign pc_jump_D = {pc_plus4_D[31:28],instr_D[25:0],2'b00};
@@ -172,7 +171,7 @@ module datapath(
 
 	//===============================Execute
 	flopenrc #(32) r1E(clk,rst,~Stall_E,Flush_E,a1_D,a_E);
-	flopenrc #(32) r2E(clk,rst,~Stall_E,Flush_E,b_D,b_E);
+	flopenrc #(32) r2E(clk,rst,~Stall_E,Flush_E,b1_D,b_E);
 	flopenrc #(32) r3E(clk,rst,~Stall_E,Flush_E,sign_imm_D,sign_imm_E);
 	flopenrc #(5)  r4E(clk,rst,~Stall_E,Flush_E,rs_D,rs_E);
 	flopenrc #(5)  r5E(clk,rst,~Stall_E,Flush_E,rt_D,rt_E);
