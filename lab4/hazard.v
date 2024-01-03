@@ -12,9 +12,9 @@ module hazard(
 	output wire Stall_D,
 	input wire JumpJr_D,
 	output wire Flush_D,
-	input wire Jump_D,
 	input wire [31:0] instr_D,
 	input wire [7:0] ALUControl_D,
+	input wire Jump_D,
 	//execute stage
 	input wire [4:0] rs_E,rt_E,
 	input wire [4:0] write_reg_E,
@@ -24,6 +24,7 @@ module hazard(
 	output wire Flush_E,
 	input wire alu_ready_E,
 	output wire Stall_E,
+	input wire Jump_E,
 	
 	//mem stage
 	input wire [4:0] write_reg_M,
@@ -31,11 +32,13 @@ module hazard(
 	input wire [1:0] MemtoReg_M,
 	output wire Flush_M,
 	output wire ForwardHi_M, ForwardLo_M,
+	input wire Jump_M,
 
 	//write back stage
 	input wire[4:0] write_reg_W,
 	input wire RegWrite_W,
-	output wire HiWrite_W, LoWrite_W
+	output wire HiWrite_W, LoWrite_W,
+	input wire Jump_W
 );
 	wire [6:0] opcode_D = instr_D[31:26];
 
@@ -85,7 +88,7 @@ module hazard(
 
 	assign Stall_E = alu_stall_E;
 	assign Stall_D = Stall_E | lw_stall_D | branch1_stall_D | jr_stall_D | branch2_stall_D;
-	assign Stall_F = Stall_D;
+	assign Stall_F = Stall_D | Jump_E | Jump_M | Jump_D;
 	
 	assign Flush_M = Stall_E;
 	assign Flush_E = Stall_D & ~Flush_M;

@@ -6,13 +6,12 @@ module datapath(
 	output wire [31:0] pc_F,
 	input wire [31:0] instr_F,
 	//decode stage
-	input wire [1:0] PCSrc_D,
 	input wire Branch1_D,Branch2_D,
 	input wire JumpJr_D,
 	output wire [31:0] instr_D,
 	output wire [31:0] a1_D, b1_D,
-	input wire Jump_D,
 	input wire [7:0] ALUControl_D,
+	input wire Jump_D,
 	//execute stage
 	input wire [1:0]MemtoReg_E,
 	input wire RegDst_E,
@@ -24,18 +23,22 @@ module datapath(
 	input wire ALUSrcA_E,
 	input wire [1:0] ALUSrcB_E,
 	input wire WriteReg_E,
+	input wire Jump_E,
 	//mem stage
 	input wire [1:0]MemtoReg_M,
 	input wire RegWrite_M,
 	output wire [31:0] alu_out_M,write_data_M,
 	input wire [31:0] read_word_data_M,
 	output wire Flush_M,
+	input wire Jump_M,
 	//writeback stage
 	input wire [1:0]MemtoReg_W,
 	input wire RegWrite_W,
 	output wire [4:0] write_reg_W,
 	output wire [31:0] result_W,pc_W,
-	input wire LoWrite_W, HiWrite_W
+	input wire LoWrite_W, HiWrite_W,
+	input wire [1:0] PCSrc_W,
+	input wire Jump_W
 );
 	
 	//fetch stage
@@ -70,6 +73,7 @@ module datapath(
 	wire [31:0] write_data_E;
 	wire [31:0] instr_E;
 	wire [31:0] pc_E;
+	wire [31:0] pc_jump_E, pc_branch_E;
 
 	//mem stage
 	wire [4:0] write_reg_M;
@@ -81,6 +85,9 @@ module datapath(
 	wire [31:0] hi_write_data_M, lo_write_data_M;
 	wire [31:0] hi_read_data1_M, lo_read_data1_M;
 	wire  ForwardHi_M, ForwardLo_M;
+	wire [31:0] a_M;
+	wire [31:0] pc_jump_M;
+	wire [31:0] pc_plus4_M, pc_branch_M;
 
 	//writeback stage
 	wire [4:0] write_reg_W;
@@ -89,6 +96,9 @@ module datapath(
 	wire [31:0] pc_W;
 	wire alu_ready_W;
 	wire [31:0] hi_write_data_W, lo_write_data_W;
+	wire [31:0] a_W;
+	wire [31:0] pc_jump_W;
+	wire [31:0] pc_plus4_W, pc_branch_W;
 	
 
 	//Hazard
@@ -102,9 +112,9 @@ module datapath(
 		Stall_D,
 		JumpJr_D,
 		Flush_D,
-		Jump_D,
 		instr_D,
 		ALUControl_D,
+		Jump_D,
 		//execute stage
 		rs_E,rt_E,
 		write_reg_E,
@@ -114,20 +124,23 @@ module datapath(
 		Flush_E,
 		alu_ready_E,
 		Stall_E,
+		Jump_E,
 		//mem stage
 		write_reg_M,
 		RegWrite_M,
 		MemtoReg_M,
 		Flush_M,
 		ForwardHi_M, ForwardLo_M,
+		Jump_M,
 		//write back stage
 		write_reg_W,
 		RegWrite_W,
-		HiWrite_W, LoWrite_W
+		HiWrite_W, LoWrite_W,
+		Jump_W
 	);
 	
 	//===============================Fetch
-	mux4 #(32) pcmux4(pc_plus4_F,pc_branch_D,pc_jump_D,a1_D,PCSrc_D,pc_next_F);
+	mux4 #(32) pcmux4(pc_plus4_F,pc_branch_W,pc_jump_W,a_W,PCSrc_W,pc_next_F);
 	assign pc_plus4_F = pc_F + 4;
 	pc #(32) pcreg(clk,rst,~Stall_F,pc_next_F,pc_F);
 	
@@ -158,7 +171,7 @@ module datapath(
 	assign b1_D = (ForwardB_D) ? alu_out_M: b_D;
 
 	//===============================Execute
-	flopenrc #(32) r1E(clk,rst,~Stall_E,Flush_E,a_D,a_E);
+	flopenrc #(32) r1E(clk,rst,~Stall_E,Flush_E,a1_D,a_E);
 	flopenrc #(32) r2E(clk,rst,~Stall_E,Flush_E,b_D,b_E);
 	flopenrc #(32) r3E(clk,rst,~Stall_E,Flush_E,sign_imm_D,sign_imm_E);
 	flopenrc #(5)  r4E(clk,rst,~Stall_E,Flush_E,rs_D,rs_E);
@@ -168,6 +181,8 @@ module datapath(
 	flopenrc #(32)  r10E(clk,rst,~Stall_E,Flush_E,pc_plus4_D,pc_plus4_E);
 	flopenrc #(32)  r11E(clk,rst,~Stall_E,Flush_E,instr_D,instr_E);
 	flopenrc #(32)  r12E(clk,rst,~Stall_E,Flush_E,pc_D,pc_E);
+	flopenrc #(32)  r13E(clk,rst,~Stall_E,Flush_E,pc_jump_D,pc_jump_E);
+	flopenrc #(32)  r14E(clk,rst,~Stall_E,Flush_E,pc_branch_D,pc_branch_E);
 
 	mux3 #(32) forwardaemux(a_E,result_W,alu_out_M,ForwardA_E,a1_E); 
 	mux3 #(32) forwardbemux(b_E,result_W,alu_out_M,ForwardB_E,b1_E);
@@ -190,12 +205,16 @@ module datapath(
 	floprc #(32)  r8M(clk,rst,Flush_M,hi_write_data_E,hi_write_data_M);
 	floprc #(32)  r9M(clk,rst,Flush_M,lo_write_data_E,lo_write_data_M);
 	floprc #(1)  r10M(clk,rst,Flush_M,alu_ready_E,alu_ready_M);
+	floprc #(32)  r11M(clk,rst,Flush_M,a_E,a_M);
+	floprc #(32)  r12M(clk,rst,Flush_M,pc_jump_E,pc_jump_M);
+	floprc #(32)  r13M(clk,rst,Flush_M,pc_plus4_E,pc_plus4_M);
+	floprc #(32)  r14M(clk,rst,Flush_M,pc_branch_E,pc_branch_M);
 	// TODO 
 	loadselect loadselect(instr_M, read_word_data_M, read_data_M);
-	// alu_ready, 防止除法未计算完毕写入hi lo寄存器
+	// alu_ready, 防止除法未计算完毕写入hi lo寄存�?
 	hiloreg HI(clk, HiWrite_W & alu_ready_W, hi_write_data_W, hi_read_data_M);
 	hiloreg LO(clk, LoWrite_W & alu_ready_W, lo_write_data_W, lo_read_data_M);
-	// TODO 数据冒险 前推HI LO寄存器到Mem阶段的值 （div mfhi mflo）
+	// TODO 数据冒险 前推HI LO寄存器到Mem阶段的�?? （div mfhi mflo�?
 	assign hi_read_data1_M = (ForwardHi_M) ? hi_write_data_W: hi_read_data_M;
 	assign lo_read_data1_M = (ForwardLo_M) ? lo_write_data_W: lo_read_data_M;
 
@@ -209,6 +228,10 @@ module datapath(
 	flopr #(32)  r7W(clk,rst,hi_write_data_M,hi_write_data_W);
 	flopr #(32)  r8W(clk,rst,lo_write_data_M,lo_write_data_W);
 	flopr #(1)  r9W(clk,rst,alu_ready_M,alu_ready_W);
+	flopr #(32)  r10W(clk,rst,a_M,a_W);
+	flopr #(32)  r11W(clk,rst,pc_jump_M,pc_jump_W);
+	flopr #(32)  r12W(clk,rst,pc_plus4_M,pc_plus4_W);
+	flopr #(32)  r13W(clk,rst,pc_branch_M,pc_branch_W);
 
 	mux4 #(32) resultWmux4(alu_out_W,read_data_W,hi_read_data_W,lo_read_data_W,MemtoReg_W,result_W);
 endmodule

@@ -18,7 +18,7 @@ module mips(
 	
 	wire [31:0] instr_D;
 	wire regdstE,JumpJr_D;
-	wire [1:0] pcsrcD;
+	wire [1:0] PCSrc_W;
 	wire [1:0] memtoregE,memtoregM,memtoregW;
 	wire regwriteE,regwriteM,RegWrite_W;
 	wire [7:0] alucontrolE;
@@ -38,10 +38,10 @@ module mips(
 
 		//decode stage
 		instr_D,
-		pcsrcD,Branch1_D,Branch2_D,JumpJr_D,
+		Branch1_D,Branch2_D,JumpJr_D,
 		a1_D, b1_D,
-		Jump_D,
 		ALUControl_D,
+		Jump_D,
 		
 		//execute stage
 		flushE,
@@ -52,15 +52,19 @@ module mips(
 		Stall_E,
 		ALUSrcA_E,ALUSrcB_E,
 		WriteReg_E,
+		Jump_E,
 
 		//mem stage
 		memtoregM,memwriteM,
 		regwriteM,
 		Flush_M,
+		Jump_M,
 
 		//write back stage
 		memtoregW,RegWrite_W,
-		LoWrite_W, HiWrite_W
+		LoWrite_W, HiWrite_W,
+		PCSrc_W,
+		Jump_W
 	);
 	datapath dp(
 		clk,rst,
@@ -68,12 +72,12 @@ module mips(
 		pcF,
 		instrF,
 		//decode stage
-		pcsrcD,Branch1_D,Branch2_D,
+		Branch1_D,Branch2_D,
 		JumpJr_D,
 		instr_D,
 		a1_D, b1_D,
-		Jump_D,
 		ALUControl_D,
+		Jump_D,
 		//execute stage
 		memtoregE,
 		regdstE,
@@ -84,19 +88,23 @@ module mips(
 		Stall_E,
 		ALUSrcA_E,ALUSrcB_E,
 		WriteReg_E,
+		Jump_E,
 		//mem stage
 		memtoregM,
 		regwriteM,
 		aluoutM,writedataM,
 		readdataM,
 		Flush_M,
+		Jump_M,
 		//writeback stage
 		memtoregW,
 		RegWrite_W,
 		write_reg_W,
 		result_W,
 		pc_W,
-		LoWrite_W, HiWrite_W
+		LoWrite_W, HiWrite_W,
+		PCSrc_W,
+		Jump_W
 	);
 	
 endmodule
