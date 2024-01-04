@@ -29,7 +29,7 @@
 // Description: ����ģ��
 // Revision: 1.0
 //////////////////////////////////////////////////////////////////////
-
+`timescale 1ns / 1ps
 `include "defines.vh"
 
 module div(

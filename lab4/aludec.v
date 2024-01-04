@@ -24,6 +24,7 @@
 module aludec(
 	input wire[5:0] funct,
 	input wire[5:0] aluop,
+	input wire[4:0] rt,
 	output reg[7:0] alucontrol
     );
 	always @(*) begin
@@ -58,6 +59,13 @@ module aludec(
 					`EXE_MULT: alucontrol = `EXE_MULT_OP; // mult
 					`EXE_MULTU: alucontrol = `EXE_MULTU_OP; // multu
 
+					// branch instruction
+					`EXE_JR: alucontrol = `EXE_JR_OP; // jr
+					`EXE_JALR: alucontrol = `EXE_JALR_OP; // jalr
+
+					// default
+					default: alucontrol = `EXE_NOP_OP;
+
 			endcase
 			`EXE_ANDI: alucontrol = `EXE_ANDI_OP; // andi
 			`EXE_ORI: alucontrol = `EXE_ORI_OP; // ori
@@ -69,7 +77,35 @@ module aludec(
 			`EXE_SLTI: alucontrol = `EXE_SLTI_OP; // slti
 			`EXE_SLTIU: alucontrol = `EXE_SLTIU_OP; // sltiu
 
-			
+			// branch instruction
+			`EXE_BEQ: alucontrol = `EXE_BEQ_OP; // beq
+			`EXE_BNE: alucontrol = `EXE_BNE_OP; // bne
+			`EXE_BGTZ: alucontrol = `EXE_BGTZ_OP; // bgtz
+			`EXE_BLEZ: alucontrol = `EXE_BLEZ_OP; // blez
+
+			`EXE_REGIMM_INST: case(rt)
+				`EXE_BGEZ: alucontrol = `EXE_BGEZ_OP; // bgez
+				`EXE_BLTZ: alucontrol = `EXE_BLTZ_OP; // bltz
+				`EXE_BLTZAL: alucontrol = `EXE_BLTZAL_OP; // bltzal
+				`EXE_BGEZAL: alucontrol = `EXE_BGEZAL_OP; // bgezal
+				default: alucontrol = `EXE_NOP_OP;
+			endcase
+
+
+			`EXE_J: alucontrol = `EXE_J_OP; // j
+			`EXE_JAL: alucontrol = `EXE_JAL_OP; // jal
+
+
+			// StoreAndLoad instruction
+			`EXE_LB: alucontrol = `EXE_LB_OP; // lb ==> 读出的值符号扩展
+			`EXE_LBU: alucontrol = `EXE_LBU_OP; // lbu ==> 读出的值0扩展
+			`EXE_LH: alucontrol = `EXE_LH_OP; // lh
+			`EXE_LHU: alucontrol = `EXE_LHU_OP; // lhu same as pair before
+			`EXE_LW: alucontrol = `EXE_LW_OP; // lw
+			`EXE_SB: alucontrol = `EXE_SB_OP; // sb
+			`EXE_SH: alucontrol = `EXE_SH_OP; // sh
+			`EXE_SW: alucontrol = `EXE_SW_OP; // sw
+
 			default: alucontrol = `EXE_NOP_OP;
 		endcase
 	

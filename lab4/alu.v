@@ -29,7 +29,8 @@ module alu(
 	output reg[31:0] y,
 	output reg overflow,
 	input wire[63:0] hilo_in,
-	output reg [63:0] hilo_out
+	output reg [63:0] hilo_out,
+	input wire [15:0] offset // 存取指令的offset 
     );
 
 	always @(*) begin
@@ -116,7 +117,7 @@ module alu(
 
 			`EXE_ADD_OP: begin
 				y = a + b;
-				overflow = 0; // 先不考虑溢出
+				overflow = (~y[31] & a[31] & b[31]) | (y[31] & ~a[31] & ~b[31]);
 			end
 			`EXE_ADDU_OP: begin
 				y = a + b;
@@ -124,7 +125,7 @@ module alu(
 			end
 			`EXE_SUB_OP: begin
 				y = a - b;
-				overflow = 0; // 先不考虑溢出
+				overflow = (~y[31] & a[31] & ~b[31]) | (y[31] & ~a[31] & b[31]);
 			end
 			`EXE_SUBU_OP: begin
 				y = a - b;
@@ -157,7 +158,7 @@ module alu(
 			end
 			`EXE_ADDI_OP: begin
 				y = a + b;
-				overflow = 0;// 先不考虑溢出
+				overflow = (~y[31] & a[31] & b[31]) | (y[31] & ~a[31] & ~b[31]);
 			end
 			`EXE_ADDIU_OP: begin
 				y = a + b;
@@ -171,9 +172,23 @@ module alu(
 				y = a < b ? 1 : 0;
 				overflow = 0;
 			end
+
+			// StoreAndLoad instruction: 全部都是符号扩展
+			`EXE_LB_OP, 
+			`EXE_LBU_OP,
+			`EXE_LH_OP,
+			`EXE_LHU_OP,
+			`EXE_LW_OP,
+			`EXE_SB_OP,
+			`EXE_SH_OP,
+			`EXE_SW_OP: begin
+				y = a + {{16{offset[15]}}, offset}; // 结果为虚地址
+				overflow = 0;
+			end
 			default: begin
 				y = 32'b0;
 				overflow = 0;
+				hilo_out = 0;
 			end
 
 		endcase

@@ -22,7 +22,7 @@
 
 
 module hilo_reg(
-	input wire clk,rst,
+	input wire clk,rst, flush,
 	input wire HiLoWrite_en,
 	input wire [7:0] alucontrol,
 	// 除法
@@ -37,15 +37,18 @@ module hilo_reg(
 			hi_o <= 0;
 			lo_o <= 0;
 		end
-		if(div_result_ready) begin
-			hi_o <= div_result[63:32];
-			lo_o <= div_result[31:0];
-		end
-		else if(HiLoWrite_en & alucontrol == `EXE_MTHI_OP) begin
-			hi_o <= hi_i;
-		end
-		else if(HiLoWrite_en & alucontrol == `EXE_MTLO_OP) begin
-			lo_o <= lo_i;
+		else if(~flush) begin
+			if(div_result_ready) begin
+				hi_o <= div_result[63:32];
+				lo_o <= div_result[31:0];
+			end else if(HiLoWrite_en & alucontrol == `EXE_MTHI_OP) begin
+				hi_o <= hi_i;
+			end else if(HiLoWrite_en & alucontrol == `EXE_MTLO_OP) begin
+				lo_o <= lo_i;
+			end else if(alucontrol == `EXE_MULT_OP | alucontrol == `EXE_MULTU_OP) begin
+				hi_o <= hi_i;
+				lo_o <= lo_i;
+			end
 		end
 		
 	end

@@ -24,15 +24,24 @@ module controller(
 	input wire clk,
 	input wire rst,
 	//decode stage
+	input wire[31:0] instrD,
 	input wire[5:0] opD,
+	input wire[4:0] rtD,
 	input wire[5:0] functD,
 	input wire stallD, 
 	output wire pcsrcD,
 	output wire branchD,
-	output wire equalD,
+	input wire equalD,
 	output wire jumpD,
-	
+	output wire jalD, 
+	output wire jrD,
+	output wire balD,
+	output wire memenD,
 	output wire HiLoWriteD,
+	output wire breakD,
+	output wire syscallD,
+	output wire reserve_instructionD,
+	output wire eretD,
 	output wire[7:0] alucontrolD,
 	//execute stage
 	input wire flushE,
@@ -41,61 +50,83 @@ module controller(
 	output wire regdstE,
 	output wire regwriteE,	
 	output wire[7:0] alucontrolE,
-	
+	output wire jumpE,
+	output wire jalE,
+	output wire jrE,
+	output wire balE,
+	output wire memenE,
 	output wire HiLoWriteE,
-
-
 	//mem stage
+	input wire flushM,
 	output wire memtoregM,
-	output wire memwriteM,
+	output wire memenM,
 	output wire regwriteM,
-	
 	output wire HiLoWriteM,
-	
+	output wire mtcp0M, mfcp0M,
 	//write back stage
+	input wire flushW,
 	output wire memtoregW,
 	output wire regwriteW,
-
 	output wire HiLoWriteW
 	);
 	
 	//decode stage
 	wire memtoregD;
-	wire memwriteD,alusrcD,regdstD,regwriteD;
+
+	wire alusrcD;
+	wire regdstD;
+	wire regwriteD;
+	
+	wire mtcp0D;
+	wire mfcp0D;
 
 	//execute stage
-	wire memwriteE;
-	wire jumpD;
+
+	wire mtcp0E, mfcp0E;
 
 	maindec md(
+		instrD,
 		opD,
+		rtD,
 		functD,
 		memtoregD,
-		memwriteD,
+		memenD,
 		branchD,
 		alusrcD,
 		regdstD,
 		regwriteD,
 		jumpD,
-		HiLoWriteD
+		jalD,
+		jrD,
+		balD,
+		HiLoWriteD,
+
+
+		breakD,
+		syscallD,
+		reserve_instructionD,
+		eretD,
+		mtcp0D,
+		mfcp0D
 		);
 		
 	aludec ad(
 		.funct(functD),
 		.aluop(opD), 
+		.rt(rtD),
 		.alucontrol(alucontrolD)
 		);
 
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	flopenrc #(13) regE(
+	flopenrc #(19) regE(
 		clk,
 		rst,
 		~stallD,
 		flushE,
-		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD},
-		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE}
+		{memtoregD,memenD,alusrcD,regdstD,regwriteD,alucontrolD, jumpD, jalD, jrD, balD, mtcp0D, mfcp0D},
+		{memtoregE,memenE,alusrcE,regdstE,regwriteE,alucontrolE, jumpE, jalE, jrE, balE, mtcp0E, mfcp0E}
 		);
 	// HiLoWrite D --> E
 	flopr #(1) hiloregDE(
@@ -103,13 +134,17 @@ module controller(
 		HiLoWriteD,
 		HiLoWriteE
 	);
-	flopr #(4) regM(
-		clk,rst,
-		{memtoregE,memwriteE,regwriteE, HiLoWriteE},
-		{memtoregM,memwriteM,regwriteM, HiLoWriteM}
+	floprc #(6) regM(
+		clk,
+		rst,
+		flushM,
+		{memtoregE,memenE,regwriteE, HiLoWriteE, mtcp0E, mfcp0E},
+		{memtoregM,memenM,regwriteM, HiLoWriteM, mtcp0M, mfcp0M}
 		);
-	flopr #(3) regW(
-		clk,rst,
+	floprc #(3) regW(
+		clk,
+		rst,
+		flushW,
 		{memtoregM,regwriteM, HiLoWriteM},
 		{memtoregW,regwriteW, HiLoWriteW}
 		);
