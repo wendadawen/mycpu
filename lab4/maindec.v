@@ -5,7 +5,7 @@
 module maindec(
 	input wire [31:0] instr,
 	
-	output reg [1:0] MemtoReg,
+	output reg [2:0] MemtoReg,
 	output reg [3:0] MemWrite,
 	output reg ALUSrcA,
 	output reg [1:0] ALUSrcB,
@@ -24,18 +24,72 @@ module maindec(
 	output reg BranchBltz,
 	output reg JumpJ,
 	output reg JumpJr,
+	output reg Invaild,
+	output reg Cp0Write,
 	output reg [7:0] ALUControl
 );
 
 	wire [5:0] opcode;
 	wire [5:0] funct;
-	wire [4:0] rt;
+	wire [4:0] rt,rs;
 	wire [1:0] offest;
 
 	assign opcode = instr[31:26];
 	assign funct = instr[5:0];
 	assign rt = instr[20:16];
+	assign rs = instr[25:21];
 	assign offest = instr[1:0];
+
+	// Cp0Write
+	always @(*) begin
+		case (opcode)
+			`SPECIAL3_INST: begin
+				case (rs)
+					`RS_MTC0: Cp0Write <= 1'b1;
+					default: Cp0Write <= 1'b0;
+				endcase
+			end
+			default: Cp0Write <= 1'b0;
+		endcase
+	end
+
+	// Invaild
+	always @(*) begin 
+		case(opcode) 
+			`OP_R_TYPE: begin
+				case(funct)
+					`FUNCT_AND,`FUNCT_OR,`FUNCT_XOR,`FUNCT_NOR,
+					`FUNCT_SLL,`FUNCT_SRL,`FUNCT_SRA,`FUNCT_SLLV,`FUNCT_SRLV,`FUNCT_SRAV,
+					`FUNCT_MFHI,`FUNCT_MFLO,`FUNCT_MTHI,`FUNCT_MTLO,
+					`FUNCT_DIV,`FUNCT_DIVU,`FUNCT_MULT,`FUNCT_MULTU,`FUNCT_ADD,`FUNCT_ADDU,`FUNCT_SUB,`FUNCT_SUBU,`FUNCT_SLT,`FUNCT_SLTU,
+					`FUNCT_JR,`FUNCT_JALR, `FUNCT_SYSCALL, `FUNCT_BREAK:  Invaild <= 1'b0;
+					default: Invaild <= 1'b1;
+				endcase
+			end
+			`OP_BLTZAL, `OP_BGEZAL, `OP_BLTZ, `OP_BGEZ: begin 
+				case(rt)
+					`RT_BLTZAL,`RT_BGEZAL,`RT_BLTZ,`RT_BGEZ: Invaild <= 1'b0;
+					default: Invaild <= 1'b1;
+				endcase
+			end
+			`SPECIAL3_INST: begin
+				case (rs)
+					`RS_MFC0, `RS_MTC0: Invaild <= 1'b0;
+					default: begin
+						case (instr)
+							`INSTR_ERET: Invaild <= 1'b0;
+							default: Invaild <= 1'b1;
+						endcase
+					end
+				endcase
+			end
+			`OP_ANDI,`OP_ORI,`OP_XORI,`OP_LUI,
+			`OP_ADDI,`OP_ADDIU,`OP_SLTI,`OP_SLTIU,
+			`OP_BEQ,`OP_BNE,`OP_BGTZ,`OP_BLEZ,`OP_J,`OP_JAL,
+			`OP_SB,`OP_SH,`OP_SW,`OP_LB,`OP_LBU,`OP_LH,`OP_LHU,`OP_LW: Invaild <= 1'b0;
+			default: Invaild <= 1'b1;
+		endcase
+	end
 
 	// ALUControl
 	always @(*) begin
@@ -57,9 +111,9 @@ module maindec(
 					`FUNCT_MULT:  ALUControl <= `ALU_MULT;
 					`FUNCT_MULTU: ALUControl <= `ALU_MULTU;
 					`FUNCT_ADD:   ALUControl <= `ALU_ADD;
-					`FUNCT_ADDU:  ALUControl <= `ALU_ADD;
+					`FUNCT_ADDU:  ALUControl <= `ALU_ADDU;
 					`FUNCT_SUB:   ALUControl <= `ALU_SUB;
-					`FUNCT_SUBU:  ALUControl <= `ALU_SUB;
+					`FUNCT_SUBU:  ALUControl <= `ALU_SUBU;
 					`FUNCT_SLT:   ALUControl <= `ALU_SLT;
 					`FUNCT_SLTU:  ALUControl <= `ALU_SLTU;
 					`FUNCT_JALR:  ALUControl <= `ALU_ADD;
@@ -71,7 +125,7 @@ module maindec(
 			`OP_XORI:   ALUControl <= `ALU_XOR;
 			`OP_LUI:    ALUControl <= `ALU_LUI;
 			`OP_ADDI:   ALUControl <= `ALU_ADD;
-			`OP_ADDIU:  ALUControl <= `ALU_ADD;
+			`OP_ADDIU:  ALUControl <= `ALU_ADDU;
 			`OP_SLTI:   ALUControl <= `ALU_SLT;
 			`OP_SLTIU:  ALUControl <= `ALU_SLTU;
 			`OP_JAL: 	ALUControl <= `ALU_ADD;
@@ -90,26 +144,38 @@ module maindec(
 					default: ALUControl <=`ALU_DEFAULT;
 				endcase
 			end
+			`SPECIAL3_INST: begin
+				case (rs)
+					`RS_MTC0: ALUControl <= `ALU_MTC0;
+					default: ALUControl <= `ALU_DEFAULT;
+				endcase
+			end
 			default:    ALUControl <= `ALU_DEFAULT;
 		endcase
 	end
 
-	// MemtoReg[1:0]
+	// MemtoReg[2:0]
 	always @(*) begin
 		case(opcode)
 			`OP_R_TYPE: begin
 				case(funct)
-					`FUNCT_MFHI: MemtoReg <= 2'b10;
-					`FUNCT_MFLO: MemtoReg <= 2'b11;
-					default: MemtoReg <= 2'b00;
+					`FUNCT_MFHI: MemtoReg <= 3'b010;
+					`FUNCT_MFLO: MemtoReg <= 3'b011;
+					default: MemtoReg <= 3'b000;
 				endcase
 			end
 			`OP_LB,
 			`OP_LBU,
 			`OP_LH,
 			`OP_LHU,
-			`OP_LW: MemtoReg <= 2'b01;
-			default: MemtoReg <= 2'b00;
+			`OP_LW: MemtoReg <= 3'b001;
+			`SPECIAL3_INST: begin
+				case (rs)
+					`RS_MFC0: MemtoReg <= 3'b100;
+					default: MemtoReg <= 3'b000;
+				endcase
+			end
+			default: MemtoReg <= 3'b000;
 		endcase
 	end
 
@@ -271,6 +337,12 @@ module maindec(
 				case(rt)
 					`RT_BLTZAL,
 					`RT_BGEZAL: RegWrite <= 1'b1;
+					default: RegWrite <= 1'b0;
+				endcase
+			end
+			`SPECIAL3_INST: begin
+				case (rs)
+					`RS_MFC0: RegWrite <= 1'b1;
 					default: RegWrite <= 1'b0;
 				endcase
 			end

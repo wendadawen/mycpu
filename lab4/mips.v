@@ -19,7 +19,7 @@ module mips(
 	wire [31:0] instr_D;
 	wire regdstE,JumpJr_D;
 	wire [1:0] PCSrc_W;
-	wire [1:0] memtoregE,memtoregM,memtoregW;
+	wire [2:0] memtoregE,memtoregM,memtoregW;
 	wire regwriteE,regwriteM,RegWrite_W;
 	wire [7:0] alucontrolE;
 	wire LoWrite_E, HiWrite_E;
@@ -35,6 +35,11 @@ module mips(
 	wire Branch1_D,Branch2_D;
 	wire Jump_E, Jump_M, Jump_W;
 	wire LoWrite_W, HiWrite_W;
+	wire JumpJ_D;
+	wire Invaild_D;
+	wire Cp0Write_W;
+	wire [31:0] except_type_M;
+	wire Branch_D;
 
 	controller c(
 		clk,rst,
@@ -45,7 +50,10 @@ module mips(
 		a1_D, b1_D,
 		ALUControl_D,
 		Jump_D,
-		
+		JumpJ_D,
+		Invaild_D,
+		Branch_D,
+
 		/**************EXE****************/
 		flushE,
 		memtoregE,
@@ -62,12 +70,17 @@ module mips(
 		regwriteM,
 		Flush_M,
 		Jump_M,
+		Stall_M,
+		except_type_M,
+		Cp0Write_M,
 
 		/**************WB****************/
 		memtoregW,RegWrite_W,
 		LoWrite_W, HiWrite_W,
 		PCSrc_W,
-		Jump_W
+		Jump_W,
+		Stall_W, Flush_W,
+		Cp0Write_W
 	);
 	datapath dp(
 		clk,rst,
@@ -81,6 +94,9 @@ module mips(
 		a1_D, b1_D,
 		ALUControl_D,
 		Jump_D,
+		JumpJ_D,
+		Invaild_D,
+		Branch_D,
 		/**************EXE****************/
 		memtoregE,
 		regdstE,
@@ -99,6 +115,9 @@ module mips(
 		readdataM,
 		Flush_M,
 		Jump_M,
+		Stall_M,
+		except_type_M,
+		Cp0Write_M,
 		/**************WB****************/
 		memtoregW,
 		RegWrite_W,
@@ -107,7 +126,9 @@ module mips(
 		pc_W,
 		LoWrite_W, HiWrite_W,
 		PCSrc_W,
-		Jump_W
+		Jump_W,
+		Stall_W, Flush_W,
+		Cp0Write_W
 	);
 	
 endmodule
