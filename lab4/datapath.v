@@ -30,6 +30,8 @@ module datapath(
 	input ALUSrcB_E,
 	input WriteReg_E,
 	input Jump_E,
+	input Branch1_E,
+	input Branch2_E,
 	/**************MEM****************/
 	input MemtoReg_M,
 	input RegWrite_M,
@@ -41,6 +43,8 @@ module datapath(
 	output Stall_M,
 	output except_type_M,
 	input Cp0Write_M,
+	input Branch1_M,
+	input Branch2_M,
 	/**************WB****************/
 	input MemtoReg_W,
 	input RegWrite_W,
@@ -50,7 +54,9 @@ module datapath(
 	input PCSrc_W,
 	input Jump_W,
 	output Stall_W, Flush_W,
-	input Cp0Write_W
+	input Cp0Write_W,
+	input Branch1_W,
+	input Branch2_W
 );
 	wire clk, rst;
 	wire [31:0] pc_next_F;
@@ -188,7 +194,7 @@ module datapath(
 	pc #(32) pcreg(clk,rst,~Stall_F,Flush_F,pc_new_M,pc_next_F,pc_F);
 	// TODO
 	assign Exception_F = (pc_F[1:0]==2'b00) ? 8'b0000_0000: 8'b1000_0000;
-	assign IsInDelayslot_F = Jump_D;
+	assign IsInDelayslot_F = Jump_W | ( ~Jump_D & (Branch1_D | Branch2_D));
 	
 	//===============================Decode
 	flopenrc #(32) r1D(clk,rst,~Stall_D,Flush_D, pc_plus4_F,pc_plus4_D);
