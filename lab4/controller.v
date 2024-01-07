@@ -27,6 +27,7 @@ module controller(
 	output Jump_E,
 	output Branch1_E,
 	output Branch2_E,
+	output Cp0Write_E,
 
 	/**************MEM****************/
 	output MemtoReg_M, 
@@ -120,21 +121,21 @@ module controller(
 
 	flopenrc #(32) regE(
 		clk, rst,
-		~Stall_E, Flush_E, 
+		~Stall_E, Flush_E, inst_stall_F,data_stall_M,
 		{Branch1_D, Branch2_D, Cp0Write_D, Jump_D, PCSrc_D, WriteReg_D, LoSrc_D, HiSrc_D, LoWrite_D, HiWrite_D, MemtoReg_D, MemWrite_D, ALUSrcA_D, ALUSrcB_D, RegDst_D, RegWrite_D, ALUControl_D},
 		{Branch1_E, Branch2_E, Cp0Write_E, Jump_E, PCSrc_E, WriteReg_E, LoSrc_E, HiSrc_E, LoWrite_E, HiWrite_E, MemtoReg_E, MemWrite_E, ALUSrcA_E, ALUSrcB_E, RegDst_E, RegWrite_E, ALUControl_E}
 	);
 
 	flopenrc #(32) regM(
 		clk, rst,
-		~Stall_M, Flush_M,
+		~Stall_M, Flush_M,inst_stall_F,data_stall_M,
 		{Branch1_E, Branch2_E, Cp0Write_E, Jump_E, PCSrc_E, LoWrite_E, HiWrite_E, WriteReg_E, MemtoReg_E, MemWrite_E , RegWrite_E},
 		{Branch1_M, Branch2_M, Cp0Write_M, Jump_M, PCSrc_M, LoWrite_M, HiWrite_M, WriteReg_M, MemtoReg_M, MemWrite1_M, RegWrite_M}
 	);
 
 	flopenrc #(32) regW(
 		clk, rst,
-		~Stall_W, Flush_W,
+		~Stall_W, Flush_W, inst_stall_F,data_stall_M,
 		{Branch1_M, Branch2_M, Cp0Write_M, Jump_M, PCSrc_M, LoWrite_M, HiWrite_M, WriteReg_M, MemtoReg_M, RegWrite_M},
 		{Branch1_W, Branch2_W, Cp0Write_W, Jump_W, PCSrc_W, LoWrite_W, HiWrite_W, WriteReg_W, MemtoReg_W, RegWrite_W}
 	);

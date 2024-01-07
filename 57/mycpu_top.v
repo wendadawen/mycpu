@@ -35,6 +35,7 @@ module mycpu_top(
 	wire RegWrite_W;
 	wire [4:0] write_reg_W;
 	wire [31:0] result_W;
+    wire stall;
     mips mips(
         .clk(~clk),
         .rst(~resetn),
@@ -49,30 +50,31 @@ module mycpu_top(
         .readdataM(readdata),
         
         //debug
+        .stall(stall),
         .pc_W(debug_wb_pc),
         .RegWrite_W(RegWrite_W),
         .write_reg_W(write_reg_W),
         .result_W(result_W)
     );
 
-    assign inst_sram_en = 1'b1;
-    assign inst_sram_wen = 4'b0;
-    assign inst_sram_addr = inst_paddr;
-    assign inst_sram_wdata = 32'b0;
-    assign instr = inst_sram_rdata;
+    assign inst_sram_en      = 1'b1;
+    assign inst_sram_wen     = 4'b0;
+    assign inst_sram_addr    = inst_paddr;
+    assign inst_sram_wdata   = 32'b0;
+    assign instr             = inst_sram_rdata;
 
-    assign inst_vaddr = pc;
-    assign data_vaddr = {aluout[31:2], 2'b00};
+    assign inst_vaddr        = pc;
+    assign data_vaddr        = {aluout[31:2], 2'b00};
 
-    assign data_sram_en = 1'b1;
-    assign data_sram_wen = memwrite;
-    assign data_sram_addr = data_paddr;
-    assign data_sram_wdata = writedata;
-    assign readdata = data_sram_rdata;
+    assign data_sram_en      = 1'b1;
+    assign data_sram_wen     = memwrite;
+    assign data_sram_addr    = data_paddr;
+    assign data_sram_wdata   = writedata;
+    assign readdata          = data_sram_rdata;
 
-    assign debug_wb_pc = pc_W;
-    assign debug_wb_rf_wen = {4{RegWrite_W}};
-    assign debug_wb_rf_wnum = write_reg_W;
+    assign debug_wb_pc       = pc_W;
+    assign debug_wb_rf_wen   = {4{RegWrite_W & ~stall}};
+    assign debug_wb_rf_wnum  = write_reg_W;
     assign debug_wb_rf_wdata = result_W;
 
     //ascii

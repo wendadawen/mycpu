@@ -2,7 +2,7 @@
 
 
 module pc #(parameter WIDTH = 8)(
-	input wire clk,rst,en,Flush,
+	input wire clk,rst,en,Flush,inst_stall_F,data_stall_M,
 	input wire[WIDTH-1:0] pc_new, d,
 	output reg[WIDTH-1:0] q
 );

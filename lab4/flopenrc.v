@@ -2,7 +2,7 @@
 
 //flip-flop with enable,rst,clear
 module flopenrc #(parameter WIDTH = 8)(
-	input wire clk,rst,en,clear,
+	input wire clk,rst,en,clear,inst_stall_F,data_stall_M,
 	input wire[WIDTH-1:0] d,
 	output reg[WIDTH-1:0] q
     );

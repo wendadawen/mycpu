@@ -10,8 +10,8 @@ module alu(
 	output reg [31:0] hi_out,
 	output reg [31:0] lo_out,
 	output wire ready,
-	output reg overflow,
-	output reg zero
+	output wire overflow,
+	output wire zero
 );
 	// div
 	wire div_start,div_signed,div_ready;
@@ -20,7 +20,7 @@ module alu(
 	assign div_start = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU) & ~div_ready) ? 1'b1: 1'b0;
 	div div(clk,rst,div_signed,a,b,div_start,1'b0,div_result,div_ready);
 	// is ready result?
-	assign ready = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU)) ? ~(div_start): 1'b1;
+	assign ready = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU)) ? (div_ready): 1'b1;
 	// others
 	always @(*) begin
 		case(ALUControl) 
@@ -36,20 +36,24 @@ module alu(
 			`ALU_SRLV: result <= b >> a[4:0];
 			`ALU_SRAV: result <= $signed(b) >>> a[4:0];
 			`ALU_ADD: result <= a + b;
+			`ALU_ADDU: result <= a + b;
 			`ALU_SUB: result <= a - b;
+			`ALU_SUBU: result <= a - b;
 			`ALU_SLT: result <= ($signed(a) < $signed(b)) ? 32'b1:32'b0;
 			`ALU_SLTU: result <= (a < b) ? 32'b1:32'b0;
 			`ALU_MULT: {hi_out, lo_out} <= $signed(a) * $signed(b);
             `ALU_MULTU: {hi_out, lo_out} <= $unsigned(a) * $unsigned(b);
 			`ALU_DIV: {hi_out, lo_out} <= div_result;
 			`ALU_DIVU:{hi_out, lo_out} <= div_result;
+			`ALU_MTC0: result <= b;
 			`ALU_DEFAULT: result <= 0;
 			default: result <= 0;
 		endcase
 	end
 	// zero
-	always @(*) begin
-		zero <= (result==32'b0);
-	end
+	assign zero = (result==32'b0);
+	// overflow
+	assign overflow = (  ALUControl == `ALU_ADD) ? (result[31] && !a[31] && !b[31]) || (!result[31] && a[31] && b[31]):
+						(ALUControl == `ALU_SUB) ? ((a[31]&!b[31])&!result[31]) || ((!a[31]&b[31])&result[31]): 1'b0;  
 endmodule
 

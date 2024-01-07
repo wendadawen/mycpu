@@ -20,7 +20,7 @@ module alu(
 	assign div_start = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU) & ~div_ready) ? 1'b1: 1'b0;
 	div div(clk,rst,div_signed,a,b,div_start,1'b0,div_result,div_ready);
 	// is ready result?
-	assign ready = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU)) ? ~(div_start): 1'b1;
+	assign ready = ((ALUControl==`ALU_DIV | ALUControl==`ALU_DIVU)) ? div_ready: 1'b1;
 	// others
 	always @(*) begin
 		case(ALUControl) 

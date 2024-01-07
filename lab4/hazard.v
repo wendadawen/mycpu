@@ -3,8 +3,10 @@
 `include "defines.vh"
 
 module hazard(
+	output wire longest_stall,
 	//fetch stage
 	output wire Stall_F, Flush_F,
+	input wire inst_stall_F,
 	//decode stage
 	input wire [4:0] rs_D,rt_D,
 	input wire Branch1_D,Branch2_D,
@@ -25,6 +27,7 @@ module hazard(
 	input wire alu_ready_E,
 	output wire Stall_E,
 	input wire Jump_E,
+	output wire alu_stall_E,
 	
 	//mem stage
 	input wire [4:0] write_reg_M,
@@ -37,6 +40,8 @@ module hazard(
 	input wire [31:0] except_type_M,
 	input wire ForwardCp0_M,
 	input wire [4:0] rd_M,
+	input wire data_stall_M,
+	input wire Cp0Write_M,
 
 	//write back stage
 	input wire[4:0] write_reg_W,
@@ -77,7 +82,7 @@ module hazard(
 	// div mfhi mflo
 	assign ForwardHi_M = HiWrite_W;
 	assign ForwardLo_M = LoWrite_W;
-	assign ForwardCp0_M = Cp0Write_W & (rd_W==rd_M);
+	// assign ForwardCp0_M = Cp0Write_M & (rd_M == rd_M);
 
 	//stalls
 	assign lw_stall_D = (MemtoReg_E!=3'b000) & (rt_E==rs_D | rt_E==rt_D) & (rt_E!=0);
@@ -95,21 +100,21 @@ module hazard(
 				(MemtoReg_M!=3'b000) & write_reg_M==rs_D&rs_D!=0
 				);
 
-	assign Stall_W = 1'b0;
-	assign Stall_M = 1'b0;
-	assign Stall_E = alu_stall_E;
-	assign Stall_D = Stall_E | lw_stall_D | branch1_stall_D | jr_stall_D | branch2_stall_D;
-	assign Stall_F = Stall_D | Jump_D | Jump_E | Jump_M;
+	wire stall1;
+	wire stall2;
+	assign longest_stall = alu_stall_E | inst_stall_F | data_stall_M;
+	assign stall1 = lw_stall_D | branch1_stall_D | jr_stall_D | branch2_stall_D;
+	assign stall2 = Jump_D | Jump_E | Jump_M;
 
-	assign Flush_W = (except_type_M != 0);
-	assign Flush_M = Stall_E | ( (except_type_M != 0));
-	assign Flush_E = (Stall_D & ~Flush_M) | ( (except_type_M != 0));
-	assign Flush_D = (Stall_F & ~Flush_E & ~Flush_M) | ( (except_type_M != 0));
-	assign Flush_F = (except_type_M != 0);
-	
-	// assign Flush_W = (except_type_M != 0);
-	// assign Flush_M = Stall_E | ( (except_type_M != 0)) | Jump_W;
-	// assign Flush_E = (Stall_D & ~Flush_M) | ( (except_type_M != 0)) | (Jump_W&~alu_stall_E);
-	// assign Flush_D = (Stall_F & ~Flush_E & ~Flush_M) | ( (except_type_M != 0)) | Jump_W;
-	// assign Flush_F = (except_type_M != 0);
+	assign Stall_W = longest_stall;
+	assign Stall_M = longest_stall;
+	assign Stall_E = longest_stall;
+	assign Stall_D = longest_stall | stall1;
+	assign Stall_F = longest_stall | stall1 | stall2;
+
+	assign Flush_W = ~longest_stall & ((except_type_M != 0));
+	assign Flush_M = ~longest_stall & ((except_type_M != 0));
+	assign Flush_E = ~longest_stall & ((stall1) | (except_type_M != 0));
+	assign Flush_D = ~longest_stall & ((~stall1 & stall2) | (except_type_M != 0));
+	assign Flush_F = ~longest_stall & ((except_type_M != 0));
 endmodule
