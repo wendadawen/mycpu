@@ -50,7 +50,7 @@ module i_cache_direct_map (
 
     //判断是否命中
     wire hit, miss;
-    assign hit = c_valid & (c_tag == tag);  //cache line的valid位为1，且tag与地�?中tag相等
+    assign hit = c_valid & (c_tag == tag);  //cache line的valid位为1，且tag与地�?中tag相等
     assign miss = ~hit;
 
     //FSM
@@ -68,11 +68,11 @@ module i_cache_direct_map (
         end
     end
 
-    //读内�?
-    //变量read_req, addr_rcv, read_finish用于构�?�类sram信号�?
-    wire read_req;      //�?次完整的读事务，从发出读请求到结�?
+    //读内�?
+    //变量read_req, addr_rcv, read_finish用于构�?�类sram信号�?
+    wire read_req;      //�?次完整的读事务，从发出读请求到结�?
     reg addr_rcv;       //地址接收成功(addr_ok)后到结束
-    wire read_finish;   //数据接收成功(data_ok)，即读请求结�?
+    wire read_finish;   //数据接收成功(data_ok)，即读请求结�?
     always @(posedge clk) begin
         addr_rcv <= rst ? 1'b0 :
                     cache_inst_req & cache_inst_addr_ok ? 1'b1 :
@@ -107,13 +107,13 @@ module i_cache_direct_map (
     integer t;
     always @(posedge clk) begin
         if(rst) begin
-            //cache_valid <= '{default: '0};
-             for(t=0; t<CACHE_DEEPTH; t=t+1) begin   //刚开始将Cache置为无效
-                 cache_valid[t] <= 0;
-             end
+            cache_valid <= '{default: '0};
+            //  for(t=0; t<CACHE_DEEPTH; t=t+1) begin   //刚开始将Cache置为无效
+            //      cache_valid[t] <= 0;
+            //  end
         end
         else begin
-            if(read_finish) begin //读缺失，访存结束�?
+            if(read_finish) begin //读缺失，访存结束�?
                 cache_valid[index_save] <= 1'b1;             //将Cache line置为有效
                 cache_tag  [index_save] <= tag_save;
                 cache_block[index_save] <= cache_inst_rdata; //写入Cache line
